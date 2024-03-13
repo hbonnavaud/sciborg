@@ -35,5 +35,13 @@ for agent in os.listdir(outputs_dir):
         all_agent_evaluation_results.append(evaluations_results)
 
     all_agent_evaluation_results = np.array(all_agent_evaluation_results)
-    mean_results = np.mean(all_agent_evaluation_results, axis=0)
-    debug = 1
+    results_means = np.mean(all_agent_evaluation_results, axis=0)
+    results_stds = np.std(all_agent_evaluation_results, axis=0)
+
+    plt.plot(eval_ts_ref, results_means, label=agent)
+    plt.fill_between(eval_ts_ref, results_means + results_stds, results_means - results_stds, alpha=0.3)
+
+plt.xlabel("training interactions")
+plt.ylabel("goal-reaching accuracy")
+plt.legend()
+plt.show()

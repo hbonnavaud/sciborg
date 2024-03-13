@@ -77,7 +77,7 @@ class Agent(ABC):
         memo[id(self)] = result
         for k, v in self.__dict__.items():
             if isinstance(v, Agent):
-                setattr(result, k, v.copy())
+                setattr(result, k, copy.deepcopy(v))
             elif isinstance(v, dict):
                 new_dict = {}
                 for k_, v_ in v.items():
@@ -91,13 +91,7 @@ class Agent(ABC):
         self.__init__(**self.init_params)
 
     def copy(self):
-        agent_copy = self.__class__(**self.init_params)  # Return self.episode_id = 0
-        agent_copy.episode_time_step_id = self.episode_time_step_id
-        agent_copy.training_steps_done = self.training_steps_done
-        agent_copy.output_dir = self.output_dir
-        agent_copy.under_test = self.under_test
-        agent_copy.episode_started = self.episode_started
-        return agent_copy
+        return copy.deepcopy(self)
 
     def save(self, directory):
         create_dir(directory)

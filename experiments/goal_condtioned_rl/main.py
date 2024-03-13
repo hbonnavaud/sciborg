@@ -29,12 +29,15 @@ def simulation_status_notifier(p_info):
                 # Set done to False if one process is not
                 if not info["done"]:
                     done = False
-                bar.n = info["training_steps_done"]
+                bar.n = min(info["training_steps_done"], info["nb_training_steps"])
                 print_replace_above(0 if first else len(p_info) - index, bar)
-            time.sleep(.5)
+            time.sleep(2)
             first = False
+        except FileNotFoundError as e:
+            print("ERROR. file not found " + str(e.filename))
+            return
         except Exception as e:
-            debug = 1
+            pass  # Don't seem to be a problem.
     print("ALL DONE.")
 
 
@@ -43,8 +46,6 @@ if __name__ == "__main__":
 
     if discord_webhook_url == "":
         print("Add a discord webhook url if you want to receive discord messages once the simulations are done.")
-
-    nb_simulation_per_agent = 5
 
     agents = [
         GoalConditionedWrapper(DQN, environment.observation_space, environment.action_space,
@@ -64,9 +65,10 @@ if __name__ == "__main__":
     simulations = []
     manager = Manager()
     simulations_information = manager.list()
+    nb_simulation_per_agent = 3
     for agent in agents:
         for simulation_id in range(nb_simulation_per_agent):
-            nb_training_steps = 20000
+            nb_training_steps = 30000
 
             # Setup information that will be shared with the current process
             # It is used to show the advancement of each simulation.
@@ -83,11 +85,14 @@ if __name__ == "__main__":
                            args=(environment.copy(), agent.copy(), info),
                            kwargs={"nb_training_steps": nb_training_steps,
                                    "episodes_max_duration": 100,
-                                   "nb_steps_before_evaluation": 1000,
+                                   "nb_steps_before_evaluation": 2000,
+                                   "nb_tests_per_evaluation": 20,
                                    "simulation_id": simulation_id,
-                                   "device": "cuda"
-                                   }
-                           )
+                                   "device": "cuda",
+                                   "save": True,
+                                   "load": False,
+                                   "verbose": False
+                                   })
             simulations.append(p)
             p.start()
     notifier = mp.Process(target=simulation_status_notifier, args=(simulations_information,))
@@ -96,6 +101,7 @@ if __name__ == "__main__":
 
     for simu, info in zip(simulations, simulations_information):
         simu.join()
-        send_discord_message("[DONE] " + "hbrl simulation " + info["description"],
-                             discord_webhook_url)
+        if discord_webhook_url != "":
+            send_discord_message("[DONE] " + "hbrl simulation " + info["description"],
+                                 discord_webhook_url)
         info["done"] = True

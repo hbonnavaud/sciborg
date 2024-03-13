@@ -1,12 +1,13 @@
+import hashlib
 import json
 import os.path
 import pickle
 import sys
 import time
-import matplotlib.pyplot as plt
+from statistics import mean
+
 import torch
 from agents import Agent, GoalConditionedAgent
-from agents.value_based_agents.dqn import DQN
 from utils import ProgressBar, Ansi, print_replace_above, create_dir, empty_dir, send_discord_message
 import pprint
 
@@ -62,7 +63,7 @@ def print_simulation_status(agent, environment, training_progressbar, evaluation
 
 def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_training_steps=500,
                episodes_max_duration=200, nb_tests_per_evaluation=20, nb_steps_before_evaluation=50, plot=False,
-               verbose=True, generate_videos=False, device="cuda", save_agent=True):
+               verbose=True, generate_videos=False, device="cuda", save=True, load=True):
 
     simulation_output_directory = os.path.dirname(os.path.abspath(__file__))
     simulation_output_directory = os.path.join(simulation_output_directory, "outputs", environment.__class__.__name__,
@@ -78,11 +79,13 @@ def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_train
                               "verbose": verbose, "generate_videos": generate_videos, "device": device
                               }
 
-    last_save_at_step = None if save_agent else -1
+    last_save_at_step = None if save else -1
 
-    if os.path.isdir(os.path.join(simulation_output_directory, "agent")):
+    # Should we load a previously stopped launch of this simulation
+    if load and os.path.isdir(os.path.join(simulation_output_directory, "agent")):
         # Verify if the simulation is indeed the same
         sav_simu_info = json.load(open(os.path.join(simulation_output_directory, "simulation_infos.json"), "r"))
+
         for k, v in sav_simu_info.items():
             assert k in simulation_information and simulation_information[k] == v, \
                 "Loading error, saved simulation info is different"
@@ -151,11 +154,11 @@ def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_train
         # test_episode = True disable exploration from the agent (<=> force exploitation) and disable learning.
         agent_.start_episode(observation, goal, test_episode=test)
 
-        score = 0
+        reached = 0
         steps_done = 0
         for step_id in range(episodes_max_duration):
 
-            if not test and evaluation_time_steps == len(evaluation_time_steps) * nb_steps_before_evaluation:
+            if not test and shared_info["training_steps_done"] == len(evaluation_time_steps) * nb_steps_before_evaluation:
                 evaluation()
 
             action = agent_.action(observation)
@@ -166,12 +169,12 @@ def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_train
                 shared_info["training_steps_done"] += 1
 
             if info["reached"]:
-                score = 1
+                reached = 1
                 break
             if done:
                 break
         agent_.stop_episode()
-        return score, steps_done
+        return reached, steps_done
 
     def evaluation():
         agent_to_eval = agent.copy()
@@ -200,10 +203,17 @@ def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_train
     pbar_incremented = 0
 
     # training
-    while shared_info["training_steps_done"] < nb_training_steps:
-        _, episode_duration = episode(environment, agent, test=False)
 
-        if evaluation_time_steps == len(evaluation_time_steps) * nb_steps_before_evaluation:
+    successes = []
+    successes_running_average = []
+    while shared_info["training_steps_done"] < nb_training_steps:
+        score, episode_duration = episode(environment, agent, test=False)
+        successes.append(score)
+
+        if len(successes) > 20:
+            successes_running_average.append(mean(successes[-20:]))
+
+        if shared_info["training_steps_done"] == len(evaluation_time_steps) * nb_steps_before_evaluation:
             evaluation()
 
         if verbose:

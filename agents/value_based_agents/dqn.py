@@ -73,7 +73,7 @@ class DQN(ValueBasedAgent):
         return values.cpu().detach().numpy()
 
     def action(self, observation, explore=True):
-        if self.training_steps_done > self.epsilon_decay_delay:
+        if explore and not self.under_test and self.training_steps_done > self.epsilon_decay_delay:
             self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon_step)
 
         if explore and not self.under_test and np.random.rand() < self.epsilon:  # Epsilon greedy
