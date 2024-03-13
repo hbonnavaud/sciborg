@@ -96,6 +96,7 @@ if __name__ == "__main__":
 
     for simu, info in zip(simulations, simulations_information):
         simu.join()
-        send_discord_message("[DONE] " + "hbrl simulation " + info["description"],
-                             discord_webhook_url)
+        if discord_webhook_url != "":
+            send_discord_message("[DONE] " + "hbrl simulation " + info["description"],
+                                 discord_webhook_url)
         info["done"] = True
