@@ -1,0 +1,836 @@
+<mujoco model="ant">
+  <compiler angle="degree" coordinate="local" inertiafromgeom="true"/>
+  <option integrator="RK4" timestep="0.02"/>
+  <custom>
+    <numeric data="0.0 0.0 0.55 1.0 0.0 0.0 0.0 0.0 1.0 0.0 -1.0 0.0 -1.0 0.0 1.0" name="init_qpos"/>
+  </custom>
+  <default>
+    <joint armature="1" damping="1" limited="true"/>
+    <geom conaffinity="0" condim="3" density="5.0" friction="1 0.5 0.5" margin="0.01" rgba="0.8 0.6 0.4 1"/>
+  </default>
+  <asset>
+    <texture builtin="gradient" height="100" rgb1="1 1 1" rgb2="0 0 0" type="skybox" width="100"/>
+    <texture builtin="flat" height="1278" mark="cross" markrgb="1 1 1" name="texgeom" random="0.01" rgb1="0.8 0.6 0.4" rgb2="0.8 0.6 0.4" type="cube" width="127"/>
+    <texture builtin="checker" height="100" name="texplane" rgb1="0 0 0" rgb2="0.8 0.8 0.8" type="2d" width="100"/>
+    <material name="MatPlane" reflectance="0.5" shininess="1" specular="1" texrepeat="60 60" texture="texplane"/>
+    <material name="geom" texture="texgeom" texuniform="true"/>
+  </asset>
+  <worldbody>
+    <light cutoff="100" diffuse="1 1 1" dir="-0 0 -1.3" directional="true" exponent="1" pos="0 0 1.3" specular=".1 .1 .1"/>
+    <geom conaffinity="1" condim="3" material="MatPlane" name="floor" pos="0 0 0" rgba="0.8 0.9 0.8 1" size="40 40 40" type="plane"/>
+    <body name="torso" pos="0 0 0.75">
+      <camera name="track" mode="trackcom" pos="0 -3 0.3" xyaxes="1 0 0 0 0 1"/>
+      <geom name="torso_geom" pos="0 0 0" size="0.25" type="sphere"/>
+      <joint armature="0" damping="0" limited="false" margin="0.01" name="root" pos="0 0 0" type="free"/>
+      <body name="front_left_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="aux_1_geom" size="0.08" type="capsule"/>
+        <body name="aux_1" pos="0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_1" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 0.2 0.0" name="left_leg_geom" size="0.08" type="capsule"/>
+          <body pos="0.2 0.2 0">
+            <joint axis="-1 1 0" name="ankle_1" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 0.4 0.0" name="left_ankle_geom" size="0.08" type="capsule"/>
+          </body>
+        </body>
+      </body>
+      <body name="front_right_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="aux_2_geom" size="0.08" type="capsule"/>
+        <body name="aux_2" pos="-0.2 0.2 0">
+          <joint axis="0 0 1" name="hip_2" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 0.2 0.0" name="right_leg_geom" size="0.08" type="capsule"/>
+          <body pos="-0.2 0.2 0">
+            <joint axis="1 1 0" name="ankle_2" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 0.4 0.0" name="right_ankle_geom" size="0.08" type="capsule"/>
+          </body>
+        </body>
+      </body>
+      <body name="back_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="aux_3_geom" size="0.08" type="capsule"/>
+        <body name="aux_3" pos="-0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_3" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 -0.2 -0.2 0.0" name="back_leg_geom" size="0.08" type="capsule"/>
+          <body pos="-0.2 -0.2 0">
+            <joint axis="-1 1 0" name="ankle_3" pos="0.0 0.0 0.0" range="-70 -30" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 -0.4 -0.4 0.0" name="third_ankle_geom" size="0.08" type="capsule"/>
+          </body>
+        </body>
+      </body>
+      <body name="right_back_leg" pos="0 0 0">
+        <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="aux_4_geom" size="0.08" type="capsule"/>
+        <body name="aux_4" pos="0.2 -0.2 0">
+          <joint axis="0 0 1" name="hip_4" pos="0.0 0.0 0.0" range="-30 30" type="hinge"/>
+          <geom fromto="0.0 0.0 0.0 0.2 -0.2 0.0" name="rightback_leg_geom" size="0.08" type="capsule"/>
+          <body pos="0.2 -0.2 0">
+            <joint axis="1 1 0" name="ankle_4" pos="0.0 0.0 0.0" range="30 70" type="hinge"/>
+            <geom fromto="0.0 0.0 0.0 0.4 -0.4 0.0" name="fourth_ankle_geom" size="0.08" type="capsule"/>
+          </body>
+        </body>
+      </body>
+    </body>
+    <!-- Create goal and subgoal visualizations -->
+    <body name="goal_platform" pos="0 0 0.4" mocap="true">
+      <site type="sphere" size="0.5" rgba="1 1 0 1"/>
+    </body>
+    <body name="subgoal_0" pos="0 0 0.4" mocap="true">
+      <site type="sphere" size="0.5" rgba="1 0 1 0"/>
+    </body>
+    <body name="subgoal_1" pos="0 0 0.4" mocap="true">
+      <site type="sphere" size="0.5" rgba="0 1 0 0"/>
+    </body>
+    <!-- Nodes -->
+    <geom pos="0 0 0.6" name="next_target" size="0.35" type="sphere" rgba="1 0 0 0"/>
+    <geom pos="0 0 0.4" name="node_0" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_1" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_2" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_3" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_4" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_5" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_6" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_7" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_8" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_9" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_10" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_11" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_12" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_13" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_14" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_15" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_16" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_17" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_18" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_19" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_20" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_21" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_22" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_23" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_24" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_25" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_26" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_27" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_28" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_29" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_30" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_31" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_32" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_33" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_34" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_35" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_36" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_37" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_38" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_39" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_40" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_41" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_42" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_43" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_44" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_45" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_46" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_47" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_48" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_49" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_50" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_51" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_52" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_53" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_54" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_55" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_56" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_57" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_58" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_59" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_60" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_61" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_62" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_63" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_64" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_65" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_66" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_67" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_68" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_69" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_70" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_71" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_72" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_73" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_74" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_75" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_76" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_77" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_78" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_79" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_80" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_81" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_82" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_83" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_84" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_85" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_86" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_87" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_88" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_89" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_90" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_91" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_92" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_93" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_94" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_95" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_96" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_97" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_98" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_99" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_100" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_101" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_102" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_103" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_104" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_105" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_106" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_107" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_108" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_109" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_110" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_111" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_112" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_113" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_114" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_115" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_116" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_117" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_118" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_119" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_120" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_121" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_122" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_123" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_124" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_125" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_126" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_127" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_128" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_129" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_130" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_131" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_132" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_133" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_134" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_135" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_136" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_137" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_138" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_139" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_140" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_141" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_142" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_143" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_144" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_145" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_146" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_147" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_148" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_149" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_150" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_151" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_152" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_153" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_154" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_155" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_156" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_157" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_158" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_159" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_160" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_161" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_162" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_163" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_164" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_165" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_166" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_167" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_168" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_169" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_170" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_171" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_172" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_173" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_174" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_175" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_176" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_177" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_178" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_179" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_180" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_181" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_182" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_183" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_184" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_185" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_186" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_187" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_188" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_189" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_190" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_191" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_192" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_193" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_194" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_195" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_196" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_197" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_198" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <geom pos="0 0 0.4" name="node_199" size="0.4" type="sphere" rgba="0 1 0 0"/>
+    <!-- <body name="node_0" pos="4 7 0.3" mocap="true">-->
+    <!-- 			<site type="sphere" size="0.3" />-->
+    <!-- 	</body>-->
+    <!-- Edges -->
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_0" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_1" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_2" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_3" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_4" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_5" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_6" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_7" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_8" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_9" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_10" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_11" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_12" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_13" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_14" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_15" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_16" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_17" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_18" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_19" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_20" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_21" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_22" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_23" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_24" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_25" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_26" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_27" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_28" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_29" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_30" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_31" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_32" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_33" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_34" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_35" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_36" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_37" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_38" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_39" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_40" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_41" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_42" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_43" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_44" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_45" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_46" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_47" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_48" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_49" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_50" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_51" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_52" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_53" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_54" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_55" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_56" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_57" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_58" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_59" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_60" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_61" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_62" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_63" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_64" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_65" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_66" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_67" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_68" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_69" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_70" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_71" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_72" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_73" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_74" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_75" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_76" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_77" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_78" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_79" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_80" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_81" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_82" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_83" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_84" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_85" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_86" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_87" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_88" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_89" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_90" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_91" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_92" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_93" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_94" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_95" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_96" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_97" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_98" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_99" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_100" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_101" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_102" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_103" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_104" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_105" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_106" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_107" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_108" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_109" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_110" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_111" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_112" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_113" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_114" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_115" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_116" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_117" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_118" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_119" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_120" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_121" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_122" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_123" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_124" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_125" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_126" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_127" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_128" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_129" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_130" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_131" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_132" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_133" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_134" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_135" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_136" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_137" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_138" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_139" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_140" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_141" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_142" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_143" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_144" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_145" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_146" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_147" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_148" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_149" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_150" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_151" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_152" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_153" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_154" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_155" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_156" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_157" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_158" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_159" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_160" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_161" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_162" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_163" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_164" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_165" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_166" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_167" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_168" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_169" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_170" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_171" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_172" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_173" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_174" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_175" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_176" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_177" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_178" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_179" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_180" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_181" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_182" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_183" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_184" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_185" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_186" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_187" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_188" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_189" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_190" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_191" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_192" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_193" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_194" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_195" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_196" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_197" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_198" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_199" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_200" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_201" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_202" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_203" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_204" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_205" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_206" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_207" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_208" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_209" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_210" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_211" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_212" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_213" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_214" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_215" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_216" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_217" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_218" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_219" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_220" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_221" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_222" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_223" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_224" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_225" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_226" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_227" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_228" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_229" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_230" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_231" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_232" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_233" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_234" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_235" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_236" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_237" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_238" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_239" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_240" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_241" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_242" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_243" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_244" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_245" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_246" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_247" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_248" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_249" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_250" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_251" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_252" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_253" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_254" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_255" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_256" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_257" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_258" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_259" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_260" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_261" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_262" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_263" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_264" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_265" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_266" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_267" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_268" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_269" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_270" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_271" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_272" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_273" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_274" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_275" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_276" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_277" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_278" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_279" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_280" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_281" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_282" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_283" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_284" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_285" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_286" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_287" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_288" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_289" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_290" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_291" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_292" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_293" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_294" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_295" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_296" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_297" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_298" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_299" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_300" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_301" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_302" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_303" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_304" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_305" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_306" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_307" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_308" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_309" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_310" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_311" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_312" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_313" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_314" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_315" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_316" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_317" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_318" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_319" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_320" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_321" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_322" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_323" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_324" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_325" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_326" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_327" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_328" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_329" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_330" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_331" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_332" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_333" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_334" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_335" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_336" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_337" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_338" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_339" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_340" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_341" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_342" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_343" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_344" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_345" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_346" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_347" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_348" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_349" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_350" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_351" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_352" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_353" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_354" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_355" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_356" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_357" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_358" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_359" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_360" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_361" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_362" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_363" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_364" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_365" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_366" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_367" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_368" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_369" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_370" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_371" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_372" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_373" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_374" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_375" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_376" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_377" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_378" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_379" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_380" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_381" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_382" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_383" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_384" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_385" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_386" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_387" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_388" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_389" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_390" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_391" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_392" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_393" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_394" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_395" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_396" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_397" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_398" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_399" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_400" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_401" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_402" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_403" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_404" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_405" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_406" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_407" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_408" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_409" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_410" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_411" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_412" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_413" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_414" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_415" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_416" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_417" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_418" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_419" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_420" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_421" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_422" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_423" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_424" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_425" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_426" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_427" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_428" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_429" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_430" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_431" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_432" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_433" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_434" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_435" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_436" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_437" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_438" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_439" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_440" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_441" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_442" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_443" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_444" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_445" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_446" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_447" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_448" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_449" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_450" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_451" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_452" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_453" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_454" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_455" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_456" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_457" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_458" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_459" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_460" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_461" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_462" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_463" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_464" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_465" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_466" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_467" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_468" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_469" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_470" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_471" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_472" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_473" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_474" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_475" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_476" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_477" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_478" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_479" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_480" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_481" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_482" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_483" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_484" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_485" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_486" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_487" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_488" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_489" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_490" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_491" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_492" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_493" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_494" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_495" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_496" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_497" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_498" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <geom fromto="0.0 0.0 0.4 0.1 0.1 0.4" name="edge_499" rgba="0 0 0 0" size="0.08" type="cylinder"/>
+    <body name="horizontal_wall_0" pos="0.5 20.0 0.5">
+      <geom type="box" size="20.0 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="horizontal_wall_1" pos="-7.5 12.0 0.5">
+      <geom type="box" size="12.0 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="horizontal_wall_2" pos="-3.5 4.0 0.5">
+      <geom type="box" size="8.0 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="horizontal_wall_3" pos="11.5 -12.0 0.5">
+      <geom type="box" size="8.0 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="horizontal_wall_4" pos="-16.0 -20.0 0.5">
+      <geom type="box" size="3.5 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="horizontal_wall_5" pos="-8.0 -20.0 0.5">
+      <geom type="box" size="3.5 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="horizontal_wall_6" pos="8.0 -20.0 0.5">
+      <geom type="box" size="11.5 0.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="vertical_wall_0" pos="-20.0 0.0 0.5">
+      <geom type="box" size="0.5 20.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="vertical_wall_1" pos="12.0 7.5 0.5">
+      <geom type="box" size="0.5 12.0 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="vertical_wall_2" pos="20.0 -0.5 0.5">
+      <geom type="box" size="0.5 20.0 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="vertical_wall_3" pos="-12.0 -8.0 0.5">
+      <geom type="box" size="0.5 12.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="vertical_wall_4" pos="4.0 -0.5 0.5">
+      <geom type="box" size="0.5 4.0 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+    <body name="vertical_wall_5" pos="-4.0 -12.0 0.5">
+      <geom type="box" size="0.5 8.5 0.5" contype="1" conaffinity="1" rgba="0.4 0.4 0.4 1"/>
+    </body>
+  </worldbody>
+  <actuator>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_4" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_4" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_1" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_1" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_2" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_2" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="hip_3" gear="16"/>
+    <motor ctrllimited="true" ctrlrange="-1.0 1.0" joint="ankle_3" gear="16"/>
+  </actuator>
+</mujoco>
