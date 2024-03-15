@@ -17,7 +17,7 @@ class DistributionalDQN(DQN):
     distributional version of DDPG in SORB's paper (Eysenbach, 2017).
     """
 
-    name = "Distributional DQN"
+    name = "Dist. DQN"
 
     def __init__(self, observation_space, action_space, **params):
         """

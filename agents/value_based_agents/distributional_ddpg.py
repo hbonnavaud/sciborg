@@ -16,7 +16,7 @@ class DistributionalDDPG(DDPG):
     A distributional RL version of DDPG as defined in SORB (Eysenbach, 2017).
     """
 
-    name = "Distributional DDPG"
+    name = "Dist. DDPG"
 
     def __init__(self, observation_space, action_space, **params):
         """

@@ -11,6 +11,7 @@ from simulation import simulation
 from utils import send_discord_message, ProgressBar, print_replace_above
 import time
 
+
 discord_webhook_url = ""
 
 
@@ -20,7 +21,7 @@ def simulation_status_notifier(p_info):
     progress_bars = []
     for i in p_info:
         progress_bars.append(ProgressBar(name=i['description'], max_value=i['nb_training_steps'],
-                                         print_length=160, name_print_length=50))
+                                         print_length=160, name_print_length=30))
 
     while not done:
         done = True
@@ -42,7 +43,7 @@ def simulation_status_notifier(p_info):
 
 
 if __name__ == "__main__":
-    environment = GoalConditionedGridWorld(map_name=GridWorldMapsIndex.FOUR_ROOMS.value)
+    environment = GoalConditionedGridWorld(map_name=GridWorldMapsIndex.EMPTY.value)
 
     if discord_webhook_url == "":
         print("Add a discord webhook url if you want to receive discord messages once the simulations are done.")
@@ -83,7 +84,8 @@ if __name__ == "__main__":
             # Setup and launch simulation
             p = mp.Process(target=simulation,
                            args=(environment.copy(), agent.copy(), info),
-                           kwargs={"nb_training_steps": nb_training_steps,
+                           kwargs={"name": agent.name + " - par. " + str(nb_simulation_per_agent * len(agents)),
+                                   "nb_training_steps": nb_training_steps,
                                    "episodes_max_duration": 100,
                                    "nb_steps_before_evaluation": 2000,
                                    "nb_tests_per_evaluation": 20,
@@ -93,6 +95,7 @@ if __name__ == "__main__":
                                    "load": False,
                                    "verbose": False
                                    })
+
             simulations.append(p)
             p.start()
     notifier = mp.Process(target=simulation_status_notifier, args=(simulations_information,))
