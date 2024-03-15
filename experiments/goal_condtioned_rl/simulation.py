@@ -67,7 +67,7 @@ def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_train
         name = agent.name.replace(" ", "_")
     simulation_output_directory = pathlib.Path(__file__).parent
     simulation_output_directory = (simulation_output_directory / "outputs"
-                                   / environment.__class__.__name__ / name / "simulation_" + str(simulation_id))
+                                   / environment.__class__.__name__ / name / ("simulation_" + str(simulation_id)))
 
     create_dir(simulation_output_directory)
     sys.stdout = open(simulation_output_directory / "stdout.txt", "w")
@@ -84,6 +84,8 @@ def simulation(environment, agent: Agent, shared_info, simulation_id=0, nb_train
     # Should we load a previously stopped launch of this simulation
     if load and (simulation_output_directory / "agent").is_dir():
         # Verify if the simulation is indeed the same
+        a = simulation_output_directory / "simulation_infos.json"
+        b = open(simulation_output_directory / "simulation_infos.json", "r")
         sav_simu_info = json.load(open(simulation_output_directory / "simulation_infos.json", "r"))
 
         for k, v in sav_simu_info.items():

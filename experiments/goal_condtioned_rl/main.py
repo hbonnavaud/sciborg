@@ -53,12 +53,12 @@ if __name__ == "__main__":
                                environment.get_goal_from_observation),
         HER(DQN, environment.observation_space, environment.action_space, environment.get_goal_from_observation),
         TILO(DQN, environment.observation_space, environment.action_space, environment.get_goal_from_observation),
-        GoalConditionedWrapper(DistributionalDQN, environment.observation_space, environment.action_space,
-                               environment.get_goal_from_observation),
-        HER(DistributionalDQN, environment.observation_space, environment.action_space,
-            environment.get_goal_from_observation),
-        TILO(DistributionalDQN, environment.observation_space, environment.action_space,
-             environment.get_goal_from_observation),
+        # GoalConditionedWrapper(DistributionalDQN, environment.observation_space, environment.action_space,
+        #                        environment.get_goal_from_observation),
+        # HER(DistributionalDQN, environment.observation_space, environment.action_space,
+        #     environment.get_goal_from_observation),
+        # TILO(DistributionalDQN, environment.observation_space, environment.action_space,
+        #      environment.get_goal_from_observation),
     ]
 
     torch.multiprocessing.set_start_method('spawn')
@@ -84,15 +84,14 @@ if __name__ == "__main__":
             # Setup and launch simulation
             p = mp.Process(target=simulation,
                            args=(environment.copy(), agent.copy(), info),
-                           kwargs={"name": agent.name + " - par. " + str(nb_simulation_per_agent * len(agents)),
-                                   "nb_training_steps": nb_training_steps,
+                           kwargs={"nb_training_steps": nb_training_steps,
                                    "episodes_max_duration": 100,
                                    "nb_steps_before_evaluation": 2000,
                                    "nb_tests_per_evaluation": 20,
                                    "simulation_id": simulation_id,
                                    "device": "cuda",
                                    "save": True,
-                                   "load": False,
+                                   "load": True,
                                    "verbose": False
                                    })
 
