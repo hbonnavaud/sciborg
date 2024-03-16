@@ -22,10 +22,12 @@ python3 -m pip install --upgrade pip
 python3 -m pip install -r requirements.txt
 ```
 
-### Using a docker
+### Using the dockerfile
 
 ```bash
 docker build . --tag rlf:latest
-docker run --gpus all 
+docker run -v "$(pwd):/rlf/" --gpus all rlf:latest python3 /rlf/experiments/goal_condtioned_rl/main.py
 ```
-TODO: incoming
+`--gpus all` allows you to run it using cuda.
+`-v "$(pwd):/rlf/"` mount the repository as "/rlf/" so it can be used by the docker container.
+
