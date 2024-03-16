@@ -2,6 +2,21 @@
 In this experiment, we compare many agents against each others in a goal-conditioned grid world.
 
 """
+import sys
+import pathlib
+
+print()
+print()
+print()
+print("INIT UPDATED")
+
+print()
+print()
+print()
+
+path_to_rlf = pathlib.Path(__file__).parent.resolve()
+sys.path.append(str(path_to_rlf))
+
 import torch
 import torch.multiprocessing as mp
 from torch.multiprocessing import Manager
@@ -53,12 +68,12 @@ if __name__ == "__main__":
                                environment.get_goal_from_observation),
         HER(DQN, environment.observation_space, environment.action_space, environment.get_goal_from_observation),
         TILO(DQN, environment.observation_space, environment.action_space, environment.get_goal_from_observation),
-        # GoalConditionedWrapper(DistributionalDQN, environment.observation_space, environment.action_space,
-        #                        environment.get_goal_from_observation),
-        # HER(DistributionalDQN, environment.observation_space, environment.action_space,
-        #     environment.get_goal_from_observation),
-        # TILO(DistributionalDQN, environment.observation_space, environment.action_space,
-        #      environment.get_goal_from_observation),
+        GoalConditionedWrapper(DistributionalDQN, environment.observation_space, environment.action_space,
+                               environment.get_goal_from_observation),
+        HER(DistributionalDQN, environment.observation_space, environment.action_space,
+            environment.get_goal_from_observation),
+        TILO(DistributionalDQN, environment.observation_space, environment.action_space,
+             environment.get_goal_from_observation)
     ]
 
     torch.multiprocessing.set_start_method('spawn')

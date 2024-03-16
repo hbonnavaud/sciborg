@@ -44,7 +44,7 @@ for agent in os.listdir(outputs_dir):
         results_means = np.mean(all_agent_evaluation_results, axis=0)
         results_stds = np.std(all_agent_evaluation_results, axis=0)
 
-        plt.plot(eval_ts_ref, results_means, label=agent)
+        plt.plot(eval_ts_ref, results_means, label=agent.replace("_", " "))
         plt.fill_between(eval_ts_ref, results_means + results_stds, results_means - results_stds, alpha=0.3)
     else:
         labels = [plot_one_agent_details] + [None] * (len(all_agent_evaluation_results) - 1)

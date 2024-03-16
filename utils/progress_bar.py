@@ -2,11 +2,7 @@ import time
 from datetime import datetime, timedelta
 from math import ceil, sqrt
 from random import random, randint
-
-from blessings import Terminal
 from utils.ansi import Ansi
-
-term = Terminal()
 
 
 class Loader:
@@ -94,7 +90,6 @@ class ProgressBar:
             self.last_step = datetime.now()
             self.time_per_step = None
             self.estimated_end = None
-        # self.terminal_position = term.location(0, term.height - 1)
 
     def percent(self):
         start = self.min_value
