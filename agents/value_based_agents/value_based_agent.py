@@ -19,8 +19,8 @@ class ValueBasedAgent(Agent, ABC):
         """
         super().__init__(observation_space, action_space, **params)
 
-        self.batch_size = params.get("batch_size", 100)
-        self.buffer_max_size = params.get("buffer_max_size", int(1e5))
+        self.batch_size = params.get("batch_size", 150)
+        self.buffer_max_size = params.get("buffer_max_size", int(1e6))
         self.replay_buffer = ReplayBuffer(self.buffer_max_size, self.device)
 
     def scale_action(self, actions: Union[np.ndarray, torch.Tensor], source_action_box: Box):

@@ -29,7 +29,7 @@ class DQN(ValueBasedAgent):
         self.gamma = params.get("gamma", 0.95)
         self.layer_1_size = params.get("layer_1_size", 64)
         self.layer_2_size = params.get("layer_2_size", 64)
-        self.epsilon_min = params.get("epsilon_min", 0.01)
+        self.epsilon_min = params.get("epsilon_min", 0.001)
         self.epsilon_max = params.get("epsilon_max", 1.)
         self.epsilon_decay_delay = params.get("epsilon_decay_delay", 20)
         self.epsilon = None
@@ -37,7 +37,7 @@ class DQN(ValueBasedAgent):
         self.model = params.get("model", None)
 
         #  NEW, goals will be stored inside the replay buffer. We need a specific one with enough place to do so
-        self.learning_rate = params.get("learning_rate", 0.001)
+        self.learning_rate = params.get("learning_rate", 0.01)
         self.steps_before_target_update = params.get("steps_before_target_update", 1)
         self.steps_since_last_target_update = 0
         self.tau = params.get("tau", 0.001)

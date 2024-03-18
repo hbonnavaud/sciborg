@@ -22,7 +22,6 @@ def empty_dir(directory_path: str, send_to_trash=True):
     for filename in os.listdir(directory_path):
         file_path = os.path.join(directory_path, filename)
         if send_to_trash:
-            # TODO: Test
             try:
                 send2trash.send2trash(file_path)
             except Exception as e:
