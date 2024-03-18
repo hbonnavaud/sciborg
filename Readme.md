@@ -41,11 +41,21 @@ docker run -v "$(pwd):/rlf/" --gpus all rlf:latest python3 /rlf/experiments/goal
 
 ## /experiments/goal_conditioned_rl/ example
 
+#### Parrallel simulations
 The directory `/experiments/goal_conditioned_rl/` contains a `main.py` file that launch simulations in parrallel from `simulation.py`, which launch a goal-conditioned simulation between an agent and an environment.
 
+#### Extract and plot results
 During the simulation, it stores its outputs in  experiments/goal_conditioned_rl/outputs/<environment_name>/<agent_name>. Then `plot_results.py` read these outputs and generate a goal-reaching accuracy plot from them.
 
-The `simulation.py` save the agent and the ongoing simulation after each evaluation. So if your computer crash, you can re-launch the `main.py`, and the simulation.py will load the last simulation from `outputs/` directory and continue it, even if you have a lot of simulations running in parrallel.
+#### Save and reload
+The `simulation.py` saves the agent and the ongoing simulation after each evaluation. So if your computer crash, you can re-launch the `main.py`, and the `simulation.py` will load the last simulation from `outputs/` directory and continue it, even if you have a lot of simulations running in parrallel.
 
-Once a simulation is done, if you put a discord webhook in `simulation.py`, it will send a message on discord channel associated with the webhook (you don't need to have a server for this, just create a discord server, and associate a channel with a webhook). 
+#### Discord notification
+Once a simulation is done, if you put a discord webhook in `simulation.py`, it will send a message on discord channel associated with the webhook (you don't need to have a server for this, just create a discord server, and associate a channel with a webhook).
+The `send_discord_message` function can be imported from rlf/utils so it's not a big deal to use it in your own experiments.
+
+## Contribute
+
+Feel free to open an issue on any subject and any question.
+The code in `agents/`, `environments/` and `utils/` aim to be implemented in order to be as much **easy to use** as possiple. If you have any idea about how to improve it, feel free to open an issue or to contact me, I will be glad to discuss about it and modify the code in consequence.
 
