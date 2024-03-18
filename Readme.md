@@ -9,6 +9,8 @@ This project is still a work in progress but everything here should work.
 run:
 ```PYTHONPATH=$PTHONPATH:. python3 experiments/goal_condtioned_rl/main.py```
 
+NB: run it from a terminal, it uses ANSI characters and will not be printed well if you run it from py-charm.
+
 ## Installation
 
  - **Fork** and **clone** the repository.
