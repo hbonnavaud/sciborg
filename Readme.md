@@ -3,16 +3,19 @@ Reinforcement Learning Framework
 
 ### Disclaimer
 
-This project is still a work in progress and some stuff might not work.
-For example the Dockerfile have not been tested.
+This project is still a work in progress but everything here should work.
 
 ## Give it a try
 run:
 ```PYTHONPATH=$PTHONPATH:. python3 experiments/goal_condtioned_rl/main.py```
 
+NB: run it from a terminal, it uses ANSI characters and will not be printed well if you run it from py-charm.
+
 ## Installation
 
  - **Fork** and **clone** the repository.
+ - or download it with `wget https://github.com/hbonnavaud/RLFramework/archive/master.zip && unzip master.zip -d your_new_rl_project && rm master.zip`
+   (replace `your_new_rl_project` with your project name)
 
 ### Using a venv
 
@@ -36,8 +39,8 @@ docker run -v "$(pwd):/rlf/" --gpus all rlf:latest python3 /rlf/experiments/goal
 
  - Create your own project with a copy (download using wget) or a fork of this project.
  - Add an experiment directory in <your-project>/experiments and put your code inside.
- - Use the agents and environments you got from this repo in this directory (or other ones from gym ...).
- - You can start with a copy of <your-project>/experiments/goal_conditioned_rl/ which is an example.
+ - Import the agents and environments you need in your experiment directory (or other ones from gym ...).
+ - You can start with a copy of <your-project>/experiments/goal_conditioned_rl/ which is an example (explained bellow).
 
 ## /experiments/goal_conditioned_rl/ example
 
