@@ -14,6 +14,8 @@ NB: run it from a terminal, it uses ANSI characters and will not be printed well
 ## Installation
 
  - **Fork** and **clone** the repository.
+ - or download it with `wget https://github.com/hbonnavaud/RLFramework/archive/master.zip && unzip master.zip -d your_new_rl_project && rm master.zip`
+   (replace `your_new_rl_project` with your project name)
 
 ### Using a venv
 
