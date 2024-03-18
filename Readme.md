@@ -37,8 +37,8 @@ docker run -v "$(pwd):/rlf/" --gpus all rlf:latest python3 /rlf/experiments/goal
 
  - Create your own project with a copy (download using wget) or a fork of this project.
  - Add an experiment directory in <your-project>/experiments and put your code inside.
- - Use the agents and environments you got from this repo in this directory (or other ones from gym ...).
- - You can start with a copy of <your-project>/experiments/goal_conditioned_rl/ which is an example.
+ - Import the agents and environments you need in your experiment directory (or other ones from gym ...).
+ - You can start with a copy of <your-project>/experiments/goal_conditioned_rl/ which is an example (explained bellow).
 
 ## /experiments/goal_conditioned_rl/ example
 
