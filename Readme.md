@@ -32,3 +32,20 @@ docker run -v "$(pwd):/rlf/" --gpus all rlf:latest python3 /rlf/experiments/goal
 `--gpus all` allows you to run it using cuda.
 `-v "$(pwd):/rlf/"` mount the repository as "/rlf/" so it can be used by the docker container.
 
+## Usage
+
+ - Create your own project with a copy (download using wget) or a fork of this project.
+ - Add an experiment directory in <your-project>/experiments and put your code inside.
+ - Use the agents and environments you got from this repo in this directory (or other ones from gym ...).
+ - You can start with a copy of <your-project>/experiments/goal_conditioned_rl/ which is an example.
+
+## /experiments/goal_conditioned_rl/ example
+
+The directory `/experiments/goal_conditioned_rl/` contains a `main.py` file that launch simulations in parrallel from `simulation.py`, which launch a goal-conditioned simulation between an agent and an environment.
+
+During the simulation, it stores its outputs in  experiments/goal_conditioned_rl/outputs/<environment_name>/<agent_name>. Then `plot_results.py` read these outputs and generate a goal-reaching accuracy plot from them.
+
+The `simulation.py` save the agent and the ongoing simulation after each evaluation. So if your computer crash, you can re-launch the `main.py`, and the simulation.py will load the last simulation from `outputs/` directory and continue it, even if you have a lot of simulations running in parrallel.
+
+Once a simulation is done, if you put a discord webhook in `simulation.py`, it will send a message on discord channel associated with the webhook (you don't need to have a server for this, just create a discord server, and associate a channel with a webhook). 
+
