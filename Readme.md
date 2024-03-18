@@ -54,8 +54,17 @@ The `simulation.py` saves the agent and the ongoing simulation after each evalua
 Once a simulation is done, if you put a discord webhook in `simulation.py`, it will send a message on discord channel associated with the webhook (you don't need to have a server for this, just create a discord server, and associate a channel with a webhook).
 The `send_discord_message` function can be imported from rlf/utils so it's not a big deal to use it in your own experiments.
 
+## Agents
+
+< explanations incoming >
+
+## Environments
+
+< explanations incoming >
+
 ## Contribute
 
 Feel free to open an issue on any subject and any question.
 The code in `agents/`, `environments/` and `utils/` aim to be implemented in order to be as much **easy to use** as possiple. If you have any idea about how to improve it, feel free to open an issue or to contact me, I will be glad to discuss about it and modify the code in consequence.
 
+PRs for new agents and new environments are highly welcome.
