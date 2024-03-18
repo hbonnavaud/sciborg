@@ -3,8 +3,7 @@ Reinforcement Learning Framework
 
 ### Disclaimer
 
-This project is still a work in progress and some stuff might not work.
-For example the Dockerfile have not been tested.
+This project is still a work in progress but everything here should work.
 
 ## Give it a try
 run:
