@@ -5,15 +5,6 @@ In this experiment, we compare many agents against each others in a goal-conditi
 import sys
 import pathlib
 
-print()
-print()
-print()
-print("INIT UPDATED")
-
-print()
-print()
-print()
-
 path_to_rlf = pathlib.Path(__file__).parent.resolve()
 sys.path.append(str(path_to_rlf))
 

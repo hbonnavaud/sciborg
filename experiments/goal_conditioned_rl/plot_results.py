@@ -8,12 +8,6 @@ import pathlib
 current_dir = pathlib.Path(__file__).parent
 outputs_dir = current_dir / "outputs" / "GoalConditionedGridWorld"
 
-print()
-print()
-print("THIS DO NOT WORK YET, IT IS A WORK IN PROGRESS")
-print()
-print()
-
 plot_one_agent_details = ""
 
 for agent in os.listdir(outputs_dir):

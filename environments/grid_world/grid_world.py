@@ -39,7 +39,7 @@ class GridWorld(Environment):
 
         low = np.array([.5 - self.width / 2, - (self.height / 2 - .5)])
         high = np.array([self.width / 2 - .5, - (.5 - self.height / 2)])
-        self.observation_space = spaces.Box(low=low, high=high)
+        self.observation_space = spaces.Box(low=np.float32(low), high=np.float32(high))
         self.action_space = spaces.Discrete(len(Direction))
         self.reset()
 
