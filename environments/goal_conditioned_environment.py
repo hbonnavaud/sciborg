@@ -6,6 +6,10 @@ import numpy as np
 
 class GoalConditionedEnvironment(ABC):
 
+    @property
+    def name(self) -> str:
+        return self.__class__.__name__
+
     @abstractmethod
     def reset(self) -> Tuple[np.ndarray, np.ndarray]:
         """

@@ -2,12 +2,9 @@
 In this experiment, we compare many agents against each others in a goal-conditioned grid world.
 
 """
+import logging
 import sys
 import pathlib
-
-path_to_rlf = pathlib.Path(__file__).parent.resolve()
-sys.path.append(str(path_to_rlf))
-
 import torch
 import torch.multiprocessing as mp
 from torch.multiprocessing import Manager
@@ -17,6 +14,9 @@ from simulation import simulation
 from utils import send_discord_message, ProgressBar, print_replace_above
 import time
 
+
+path_to_rlf = pathlib.Path(__file__).parent.resolve()
+sys.path.append(str(path_to_rlf))
 
 discord_webhook_url = ""
 
@@ -32,11 +32,11 @@ def simulation_status_notifier(p_info):
     while not done:
         done = True
         try:
-            for index, (bar, info) in enumerate(zip(progress_bars, p_info)):
+            for index, (bar, i) in enumerate(zip(progress_bars, p_info)):
                 # Set done to False if one process is not
-                if not info["done"]:
+                if not i["done"]:
                     done = False
-                bar.n = min(info["training_steps_done"], info["nb_training_steps"])
+                bar.n = min(i["training_steps_done"], i["nb_training_steps"])
                 print_replace_above(0 if first else len(p_info) - index, bar)
             time.sleep(2)
             first = False
@@ -44,7 +44,7 @@ def simulation_status_notifier(p_info):
             print("ERROR. file not found " + str(e.filename))
             return
         except Exception as e:
-            pass  # Don't seem to be a problem.
+            logging.exception(e)  # Don't seem to be a problem.
     print("ALL DONE.")
 
 

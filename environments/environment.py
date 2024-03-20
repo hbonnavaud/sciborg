@@ -8,7 +8,7 @@ class Environment(ABC):
 
     @property
     def name(self) -> str:
-        return self.__name__
+        return self.__class__.__name__
 
     @abstractmethod
     def reset(self) -> np.ndarray:

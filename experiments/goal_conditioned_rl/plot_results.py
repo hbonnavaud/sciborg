@@ -22,9 +22,11 @@ for agent in os.listdir(outputs_dir):
         try:
             simulation_metrics = simulation_path / "simulation_metrics.pkl"
             simulation_metrics = pickle.load(open(simulation_metrics, "rb"))
-        except:
+        except FileNotFoundError:
             print("No outputs found for ", simulation, " of agent ", agent)
             continue
+        except Exception as e:  # If there is another exception, it's unknown. Raise it and please, open an issue.
+            raise e
         evaluations_results = simulation_metrics["evaluations_results"]
         evaluation_time_steps = simulation_metrics["evaluation_time_steps"]
         assert len(evaluation_time_steps) == len(evaluations_results)
