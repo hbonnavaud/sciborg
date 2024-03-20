@@ -84,12 +84,13 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         return self.reinforcement_learning_agent.get_value(self.get_features(observation, goal), actions)
 
     def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
-        super().start_episode(observation, test_episode)
-        self.current_goal = goal
-        self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_goal), test_episode)
+        GoalConditionedAgent.start_episode(self, observation, goal, test_episode)
+        wrapped_agent_observation = self.get_features(observation, self.current_goal)
+        self.reinforcement_learning_agent.start_episode(wrapped_agent_observation, test_episode)
 
     def action(self, observation, explore=True):
-        return self.reinforcement_learning_agent.action(self.get_features(observation, self.current_goal), explore)
+        wrapped_agent_observation = self.get_features(observation, self.current_goal)
+        return self.reinforcement_learning_agent.action(wrapped_agent_observation, explore)
 
     def process_interaction(self, action, reward, new_observation, done, learn=True):
         super().process_interaction(action, reward, new_observation, done, learn=learn)
