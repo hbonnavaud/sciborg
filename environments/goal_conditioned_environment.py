@@ -31,3 +31,7 @@ class GoalConditionedEnvironment(ABC):
     @abstractmethod
     def get_goal_from_observation(self, observation: np.ndarray) -> np.ndarray:
         return observation.copy()
+
+    @abstractmethod
+    def copy(self):
+        pass

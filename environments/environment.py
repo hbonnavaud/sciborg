@@ -24,3 +24,7 @@ class Environment(ABC):
         :return: observation, reward, done, info
         """
         pass
+
+    @abstractmethod
+    def copy(self):
+        pass
