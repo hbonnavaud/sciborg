@@ -4,7 +4,27 @@ Reinforcement Learning Framework
 ### Disclaimer
 
 This project is still a work in progress.
-Everything here should work, but expect a high frequence of modifications and improvements over time.
+Everything here should work, but expect a high frequency of modifications and "improvements" over time.
+
+#### TODOs (in this order)
+
+ - Propose a new usage with a `rlf` bash command. \
+   The current easier usage, is to fork or download this repository, which force you to clone/download every
+   agent, environment, or experiment in this repository. 
+   It is not a big deal now but it can become one in the future as new agents and elements are added. \
+   The command will have a simple structure:
+   - `rlf init <project_name>`: create a repository named `<project_name>` with the basic structure of this repository. 
+   - `rlf use <component>`: search for the given component (could be an agent, an environment, en experiment folder)
+      and download it with all used classes. \
+      Ex: `rlf use DQN` download classes "DQN", "ValueBasedAgent", and "Agent", and put them in the agent folder.
+   - `rlf update <component>` update a component if it has been modified on the git's main branch.
+ - Add a basic RL minimal example on cartpole (similar to the one in goal-conditioned RL).
+ - Create a wiki, because this readme is becoming messy ... It should be precise enough to be used as a documentation.
+ - clean-up environments code (should not change their behaviour)
+ - Create new agents:
+   - DIAYN: an agent that wrap an value-based RL agent and make it learn skills
+   - A model-based agent (probably MuZero if I succeed ...)
+   - ICM (intrinsic curiosity module)
 
 ## Give it a try
 run:
@@ -77,4 +97,4 @@ The `send_discord_message` function can be imported from rlf/utils so it's not a
 Feel free to open an issue on any subject and any question.
 The code in `agents/`, `environments/` and `utils/` aim to be implemented in order to be as much **easy to use** as possiple. If you have any idea about how to improve it, feel free to open an issue or to contact me, I will be glad to discuss about it and modify the code in consequence.
 
-PRs for new agents and new environments are highly welcome.
+PRs for new agents and new environments are highly welcome (Fork + pull request only!).
