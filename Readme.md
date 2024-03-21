@@ -3,7 +3,8 @@ Reinforcement Learning Framework
 
 ### Disclaimer
 
-This project is still a work in progress but everything here should work.
+This project is still a work in progress.
+Everything here should work, but expect a high frequence of modifications and improvements over time.
 
 ## Give it a try
 run:
