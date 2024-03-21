@@ -15,7 +15,7 @@ Everything here should work, but expect a high frequency of modifications and "i
    The command will have a simple structure:
    - `rlf init <project_name>`: create a repository named `<project_name>` with the basic structure of this repository. 
    - `rlf use <component>`: search for the given component (could be an agent, an environment, en experiment folder)
-      and download it with all used classes. \
+      on the main branch, and download it with all used classes. \
       Ex: `rlf use DQN` download classes "DQN", "ValueBasedAgent", and "Agent", and put them in the agent folder.
    - `rlf update <component>` update a component if it has been modified on the git's main branch.
  - Add a basic RL minimal example on cartpole (similar to the one in goal-conditioned RL).
