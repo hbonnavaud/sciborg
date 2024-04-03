@@ -8,6 +8,13 @@ Everything here should work, but expect a high frequency of modifications and "i
 
 #### TODOs (in this order)
 
+ - Add a basic RL minimal example on cartpole (similar to the one in goal-conditioned RL).
+ - Create a wiki, because this readme is becoming messy ... It should be precise enough to be used as a documentation.
+ - clean-up environments code (should not change their behaviour)
+ - Create new agents:
+   - DIAYN: an agent that wrap an value-based RL agent and make it learn skills
+   - A model-based agent (probably MuZero if I succeed ...)
+   - ICM (intrinsic curiosity module)
  - Propose a new usage with a `rlf` bash command. \
    The current easier usage, is to fork or download this repository, which force you to clone/download every
    agent, environment, or experiment in this repository. 
@@ -18,13 +25,6 @@ Everything here should work, but expect a high frequency of modifications and "i
       on the main branch, and download it with all used classes. \
       Ex: `rlf use DQN` download classes "DQN", "ValueBasedAgent", and "Agent", and put them in the agent folder.
    - `rlf update <component>` update a component if it has been modified on the git's main branch.
- - Add a basic RL minimal example on cartpole (similar to the one in goal-conditioned RL).
- - Create a wiki, because this readme is becoming messy ... It should be precise enough to be used as a documentation.
- - clean-up environments code (should not change their behaviour)
- - Create new agents:
-   - DIAYN: an agent that wrap an value-based RL agent and make it learn skills
-   - A model-based agent (probably MuZero if I succeed ...)
-   - ICM (intrinsic curiosity module)
 
 ## Give it a try
 run:
