@@ -40,7 +40,7 @@ NB: run it from a terminal, it uses ANSI characters and will not be printed well
 PROJECT_NAME="your_new_rl_project" && \
     wget https://github.com/hbonnavaud/RLFramework/archive/master.zip && \
     unzip master.zip && \
-    mv RLFramework-master $PROJECT_NAME && \
+    mv RLFramework-main $PROJECT_NAME && \
     rm master.zip
 ```
 
