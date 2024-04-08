@@ -355,6 +355,3 @@ class GridWorld(Environment):
         image[rr, cc] = (1 - extended_val) * old + extended_val * color
 
         return image
-
-    def copy(self):
-        return copy.deepcopy(self)

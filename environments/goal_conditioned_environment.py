@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
-
+import copy
 import numpy as np
 
 
@@ -26,16 +26,8 @@ class GoalConditionedEnvironment(ABC):
         pass
 
     @abstractmethod
-    def reached(self):
-        """
-        returns whether the agent has reached the goal
-        """
-        pass
-
-    @abstractmethod
     def get_goal_from_observation(self, observation: np.ndarray) -> np.ndarray:
         return observation.copy()
 
-    @abstractmethod
     def copy(self):
-        pass
+        return copy.deepcopy(self)

@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Tuple
-
+import copy
 import numpy as np
 
 
@@ -25,6 +25,5 @@ class Environment(ABC):
         """
         pass
 
-    @abstractmethod
     def copy(self):
-        pass
+        return copy.deepcopy(self)
