@@ -38,7 +38,7 @@ class RobotsIndex(Enum):
     IROBOT = "irobot"
 
 
-class MapsIndex(Enum):
+class RobotMapsIndex(Enum):
     EMPTY = "empty_room"
     FOUR_ROOMS = "four_rooms"
     HARD = "hard_maze"
@@ -49,7 +49,7 @@ class MapsIndex(Enum):
 class SingleRobotEnvironment(GoalConditionedEnvironment):
 
     def __init__(self,
-                 map_name: str = MapsIndex.FOUR_ROOMS.value,
+                 map_name: str = RobotMapsIndex.FOUR_ROOMS.value,
                  robot_name: str = RobotsIndex.IROBOT.value,
                  environment_size_scale: float = 0.5,
 
@@ -64,9 +64,9 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
                  # State composition and settings
                  use_lidar: bool = False,
-                 lidar_max_angle: float = None,      # USELESS if variable use_lidar is false
-                 nb_lidar_beams: int = 20,     # USELESS if variable use_lidar is false
-                 use_odometry: bool = False,    # Use odometry topic as position/orientation (instead of /pose by default)
+                 lidar_max_angle: float = None,     # USELESS if variable use_lidar is false
+                 nb_lidar_beams: int = 20,          # USELESS if variable use_lidar is false
+                 use_odometry: bool = False,  # Use odometry topic as position/orientation (instead of /pose by default)
                  ):
 
         """
@@ -379,7 +379,7 @@ if __name__ == "__main__":
         print("Episode {}".format(episode_id))
         env.reset()
 
-        for step_id in range(50):
+        for step_id in range(500):
             print("Step {}".format(step_id))
             env.step(env.action_space.sample())
     
