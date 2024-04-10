@@ -44,7 +44,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
                  # Environment behaviour settings
                  real_time: bool = True,
-                 simulation_step_duration: float = 0.1,
+                 simulation_step_duration: float = 0.1,  # UNUSED if real_time=True
                  goal_reachability_threshold: float = 0.40,
                  collision_distance_threshold: float = 0.30,
                  reward_at_collision: float = None,          # Set the reward given at collision.
@@ -349,7 +349,7 @@ if __name__ == "__main__":
         print("Episode {}".format(episode_id))
         env.reset()
 
-        for step_id in range(500):
-            print("Step {}".format(step_id))
-            env.step(env.action_space.sample())
+        # for step_id in range(500):
+        #     print("Step {}".format(step_id))
+        #     env.step(env.action_space.sample())
     

@@ -61,7 +61,7 @@ def load_walls(maze_array):
 
 def position_from_coordinates(x, y, scale, maze_array):
     width, height = np.array(maze_array).shape
-    return (x - width / 2 + 0.5) * scale, ((height - 1 - y) - height / 2 + 0.5) * scale
+    return ((width - 1 - x) - width / 2 + 0.5) * scale, ((height - 1 - y) - height / 2 + 0.5) * scale
 
 
 def generate_xml(map_name: str, robot_name: str, scale: float = 1., walls_height: float = 1.) -> (dict, str):
