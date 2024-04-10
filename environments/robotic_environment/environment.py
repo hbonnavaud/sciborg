@@ -61,6 +61,8 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                  reward_at_collision: float = None,          # Set the reward given at collision.
                  reward_once_reached: float = 0,
                  sparse_reward: bool = True,
+                 max_velocity: np.ndarray = np.array([0.5, 1.5]),
+                 max_action: np.ndarray = np.array([0.1, 0.3]),
 
                  # State composition and settings
                  use_lidar: bool = False,
@@ -82,6 +84,9 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             If None, no reward is the same that for a default step.
         :params sparse_reward: bool, if true, the agent will receive a reward of -1 at each step. It will receive a
             reward of - euclidean distance otherwise.
+        :params max_velocity: np.ndarray, Maximum velocity that the agent can have. The lower bound is - max_velocity.
+        :params max_action: np.ndarray, Maximum action (aka. velocity evolution) to put on the agent at each step,
+            which can be seen as the maximum acceleration. The lower bound is - max_action.
 
         # State composition and settings
         :params use_lidar: bool, whether to add the lidar information in the agent's observation or not.
@@ -207,7 +212,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.reset_client = self.node.create_client(Empty, self.reset_service_name)
 
         # Setup spaces
-        self.action_space = Box(- np.ones(2), np.ones(2), dtype=np.float32)
 
         """
         Observation:
@@ -230,10 +234,9 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.waiting_for_lidar = False
 
         # Velocities
-        self.linear_velocity = 0.
-        self.angular_velocity = 0.
-        self.linear_velocity = 0.
-        self.angular_velocity = 0.
+        self.max_velocity = max_velocity
+        self.action_space = Box(low=- max_action, high=max_action, dtype=np.float32)
+        self.velocity = np.zeros(2)  # self.velocity = np.array([linear_velocity, angular_velocity])
 
         if self.last_position_message is None:
             print("Waiting for position topic ...")
@@ -248,22 +251,28 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
     def step(self, action):
 
-        # Publish the robot action
-        vel_cmd = Twist()
-        vel_cmd.linear.x = action[0].item()
-        vel_cmd.angular.z = action[1].item()
-        self.commands_publisher.publish(vel_cmd)
+        #### PERFORM ACTION ####
 
-        self.waiting_for_position = True
-        self.waiting_for_lidar = True
-        while self.waiting_for_position and self.waiting_for_lidar:
-            rclpy.spin_once(env.node)
+        # Publish the robot action
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        self.velocity = np.clip(self.velocity + action, - self.max_velocity, self.max_velocity)
+        vel_cmd = Twist()
+        vel_cmd.linear.x = self.velocity[0].item()
+        vel_cmd.angular.z = self.velocity[1].item()
+        self.commands_publisher.publish(vel_cmd)
 
         # Unpause the simulation
         if not self.real_time:
             self.unpause_client.call_async(Empty.Request())
             time.sleep(self.simulation_step_duration)
             self.pause_client.call_async(Empty.Request())
+
+        #### GET STATE ####
+
+        self.waiting_for_position = True
+        self.waiting_for_lidar = True
+        while self.waiting_for_position and self.waiting_for_lidar:
+            rclpy.spin_once(env.node)
 
         agent_observation = np.array([
             self.last_position_message.pose.pose.position.x,
@@ -273,14 +282,16 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             self.last_position_message.pose.pose.orientation.x,
             self.last_position_message.pose.pose.orientation.y,
             self.last_position_message.pose.pose.orientation.z,
-            self.linear_velocity,
-            self.angular_velocity
+            self.velocity[0].item(),
+            self.velocity[1].item()
         ])
 
-        # read velodyne laser state
+        # read laser state
         collided = False
-        if self.last_lidar_message:
+        if self.use_lidar:
+            assert self.last_lidar_message
             if self.lidar_max_angle is not None:
+                # Filter lidar ranges
                 angle = self.last_lidar_message.angle_min
                 ranges = []
                 for r in self.last_lidar_message.ranges:
@@ -289,51 +300,21 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                     ranges.append(r)
                     angle += self.last_lidar_message.angle_increment
             else:
+                # Keep the original ones
                 ranges = self.last_lidar_message.ranges
+
+            # Sample self.nb_lidar_beams beams
             beam_width = len(ranges) // self.nb_lidar_beams
             beams = []
             for i in range(self.nb_lidar_beams):
                 beams.append(ranges[beam_width * i + beam_width // 2])
             agent_observation = np.concatenate((agent_observation, np.array(beams)))
 
-        # Calculate robot heading from odometry data
-        agent_position = agent_observation[:3]
-
-        agent_euler_orientation = get_euler_from_quaternion(*[elt.item() for elt in agent_observation[3:7]])
-        angle = round(agent_euler_orientation[2], 4)
-
-        # Calculate distance to the goal from the robot
-        distance = np.linalg.norm(
-            [agent_position[0] - self.goal[0], agent_position[1] - self.goal[1]]
-        )
-
-        # Calculate the relative angle between the robots heading and heading toward the goal
-        skew_x = self.goal[0] - agent_position[0]
-        skew_y = self.goal[1] - agent_position[0]
-        dot = skew_x * 1 + skew_y * 0
-        mag1 = math.sqrt(math.pow(skew_x, 2) + math.pow(skew_y, 2))
-        mag2 = math.sqrt(math.pow(1, 2) + math.pow(0, 2))
-        beta = math.acos(dot / (mag1 * mag2))
-        if skew_y < 0:
-            if skew_x < 0:
-                beta = -beta
-            else:
-                beta = 0 - beta
-        theta = beta - angle
-        if theta > np.pi:
-            theta = np.pi - theta
-            theta = -np.pi - theta
-        if theta < -np.pi:
-            theta = -np.pi - theta
-            theta = np.pi - theta
-
-        # Detect if the goal has been reached and give a large positive reward
+        # Compute distance to the goal, and compute reward from it
+        distance = np.linalg.norm(agent_observation[:2] - self.goal)
         reached = distance < self.goal_reachability_threshold
-
-        if reached:
-            reward = 0
-        else:
-            reward = -1 if self.sparse_reward else - distance
+        malus = -1 if self.sparse_reward else - distance
+        reward = 0 if reached else malus
 
         return agent_observation, reward, reached, {"collided": collided}
 
