@@ -61,7 +61,8 @@ def load_walls(maze_array):
 
 def position_from_coordinates(x, y, scale, maze_array):
     width, height = np.array(maze_array).shape
-    return ((width - 1 - x) - width / 2 + 0.5) * scale, ((height - 1 - y) - height / 2 + 0.5) * scale
+    return (((width - 1 - x) - width / 2 + 0.5) * scale,
+            ((height - 1 - y) - height / 2 + 0.5) * scale)
 
 
 def generate_xml(map_name: str, robot_name: str, scale: float = 1., walls_height: float = 1.) -> (dict, str):
@@ -178,7 +179,7 @@ def generate_xml(map_name: str, robot_name: str, scale: float = 1., walls_height
 
 
 if __name__ == "__main__":
-    from environments.my_robotic_room.simulations_assets.maps.four_rooms import maze_array
+    from environments.robotic_environment.simulations_assets.maps.four_rooms import maze_array
 
     # maps = ["empty_room", "extreme_maze", "four_rooms", "hard_maze", "medium_maze"]
     # for map_name in maps:

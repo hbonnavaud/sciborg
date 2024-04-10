@@ -349,7 +349,7 @@ if __name__ == "__main__":
         print("Episode {}".format(episode_id))
         env.reset()
 
-        # for step_id in range(500):
-        #     print("Step {}".format(step_id))
-        #     env.step(env.action_space.sample())
+        for step_id in range(500):
+            print("Step {}".format(step_id))
+            env.step(env.action_space.sample())
     
