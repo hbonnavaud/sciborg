@@ -1,1 +1,1 @@
-from environment import SingleRobotEnvironment, RobotsIndex, RobotMapsIndex
+from .environment import SingleRobotEnvironment, RobotsIndex, RobotMapsIndex
