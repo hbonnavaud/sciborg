@@ -1,0 +1,41 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+    <model name='bat_psa'>
+      <pose>0 0 0 0 -0 0</pose>
+      <static>1</static>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>file://models//bat_psa/bat_psa/room_07_009_without_roof.dae</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </visual>
+        <!--collision name='collision'>
+          <geometry>
+            <mesh>
+              <uri>file://models//bat_psa/bat_psa/room_07_009_without_roof.dae</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+          <max_contacts>10</max_contacts>
+          <surface>
+            <contact>
+              <ode/>
+            </contact>
+            <bounce/>
+            <friction>
+              <torsional>
+                <ode/>
+              </torsional>
+              <ode/>
+            </friction>
+          </surface>
+        </collision-->
+        <self_collide>0</self_collide>
+        <enable_wind>0</enable_wind>
+        <kinematic>0</kinematic>
+      </link>
+    </model>
+</sdf>

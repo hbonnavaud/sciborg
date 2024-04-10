@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="RoverCamera">
+    <include>
+      <uri>model://rover</uri>
+    </include>
+    <include>
+      <uri>model://camera</uri>
+      <pose>0.2 0 0.05 0 0 0</pose>
+    </include>
+    <joint type="fixed" name="camera_joint">
+      
+      <child>camera::cameralink</child>
+      <parent>rover::chassis</parent>
+    </joint>
+  </model>
+</sdf>

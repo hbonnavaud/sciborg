@@ -35,7 +35,8 @@ class HER(GoalConditionedWrapper):
         # Modify instance name
         self.name = self.reinforcement_learning_agent.name + " + HER"
 
-    def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
+    def start_episode(self, *information, test_episode=False):
+        observation, goal = information
         self.last_trajectory = []
         return super().start_episode(observation, goal, test_episode)
 

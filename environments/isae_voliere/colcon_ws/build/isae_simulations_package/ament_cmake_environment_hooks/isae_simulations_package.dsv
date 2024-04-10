@@ -1,0 +1,3 @@
+prepend-non-duplicate;GAZEBO_MODEL_PATH;share/isae_simulations_package/models
+prepend-non-duplicate;GAZEBO_RESOURCE_PATH;share/isae_simulations_package
+

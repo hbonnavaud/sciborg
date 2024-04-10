@@ -1,0 +1,106 @@
+<sdf version='1.6'>
+  <world name='default'>
+   
+    <gui fullscreen='0'>
+      <camera name='user_camera'>
+        <pose>-6.78634 -0.071184 2.57251 0 0.383643 -0.023806</pose>
+        <view_controller>orbit</view_controller>
+        <projection_type>perspective</projection_type>
+      </camera>
+    </gui>
+    
+    
+    <model name='ground_plane'>
+      <static>1</static>
+      <link name='link'>
+        <collision name='collision'>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+        </collision>
+
+        <visual name='visual'>
+          <cast_shadows>0</cast_shadows>
+          <geometry>
+            <plane>
+              <normal>0 0 1</normal>
+              <size>100 100</size>
+            </plane>
+          </geometry>
+          <material>
+            <script>
+              <uri>file://media/materials/scripts/gazebo.material</uri>
+              <name>Gazebo/DarkGray</name>
+            </script>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <include>
+      <uri>model://rover_camera</uri>
+      <pose>0.0 0 0.1 0 0</pose>
+    </include>
+    
+    <include>
+      <uri>model://blue_box</uri>
+      <pose>1.0 0 0.02 0 0 0</pose>
+    </include>
+      
+
+    <!--light name='sun' type='directional'>
+      <cast_shadows>0</cast_shadows>
+      <pose frame=''>0 0 3.5 0 -0 0</pose>
+      <diffuse>0.9 0.9 0.9 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light-->
+      
+      <light name='sun' type='directional'>
+        <pose>0 0 3.5 0 -0 0</pose>
+      </light>
+      
+      <light name='user_point_light_0' type='point'>
+        <pose>0 0 3 0 -0 0</pose>
+        <attenuation>
+          <linear>0.1</linear>
+        </attenuation>
+        <cast_shadows>false</cast_shadows>
+      </light>
+      
+      
+
+    <model name='my_mesh'>
+      <pose frame=''>0 0 0 0 -0 0</pose>
+      <static>1</static>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>file://worlds/isae_room-07009/room_07_009_without_roof.dae</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name="collision">
+          <geometry>
+          <mesh>
+            <uri>file://worlds/isae_room-07009/room_07_009_without_roof.dae</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+          </geometry>
+        </collision>
+      </link>
+    </model>
+      
+  </world>
+</sdf>

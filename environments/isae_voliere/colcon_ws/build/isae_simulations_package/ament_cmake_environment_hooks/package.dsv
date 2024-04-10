@@ -1,0 +1,4 @@
+source;share/isae_simulations_package/local_setup.bash
+source;share/isae_simulations_package/local_setup.dsv
+source;share/isae_simulations_package/local_setup.sh
+source;share/isae_simulations_package/local_setup.zsh

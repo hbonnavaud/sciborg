@@ -1,2 +1,0 @@
-Here are some scripts that can be launch simultaneously to the simulation in order to manipulate the robot or plot some 
-variables. Just source ros and gazebo, thant launch the script you want as any python file while gazebo is launched.

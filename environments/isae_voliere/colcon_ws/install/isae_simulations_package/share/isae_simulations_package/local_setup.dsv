@@ -1,0 +1,4 @@
+source;share/isae_simulations_package/environment/ament_prefix_path.sh
+source;share/isae_simulations_package/environment/isae_simulations_package.sh
+source;share/isae_simulations_package/environment/path.sh
+source;share/isae_simulations_package/environment/isae_simulations_package.dsv

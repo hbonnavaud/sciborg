@@ -1,0 +1,24 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+  <model name='bat_res_avion'>
+  <static>true</static>
+      <link name='body'>
+        <visual name='visual'>
+          <geometry>
+            <mesh>
+              <uri>file://models/bat_res_avion/bat_res_avion/bat_res_avion.dae</uri>
+              <scale>1 1 1</scale>
+            </mesh>
+          </geometry>
+        </visual>
+        <collision name="collision">
+          <geometry>
+          <mesh>
+            <uri>file://models/bat_res_avion/bat_res_avion/bat_res_avion.dae</uri>
+            <scale>1 1 1</scale>
+          </mesh>
+          </geometry>
+        </collision>
+      </link>
+  </model>
+</sdf>

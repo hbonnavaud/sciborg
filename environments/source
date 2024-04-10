@@ -1,0 +1,3 @@
+. /opt/ros/humble/setup.bash
+. /usr/share/gazebo/setup.sh
+. ~/computing/projects/rgl_robots/environments/isae_voliere/colcon_ws/install/setup.bash

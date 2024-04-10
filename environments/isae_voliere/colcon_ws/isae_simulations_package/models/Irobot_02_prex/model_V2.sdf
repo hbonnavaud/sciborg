@@ -1,0 +1,30 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="irobot_02_prex">
+  
+    <include>
+      <uri>model://create</uri>
+    </include>
+    
+    <include>
+      <uri>model://hokuyo_ros2_sensor</uri>
+      <pose>0.105 0 0.1 0 0 0</pose>
+    </include>
+    
+    <joint type="fixed" name="camera_joint">
+      <child>hokuyo_ros2_sensor::link</child>
+      <parent>create::base</parent>
+    </joint>
+
+    <plugin name="object_controller" filename="libgazebo_ros_planar_move.so">
+			<ros>
+				<namespace>/irobot02</namespace>
+			</ros>
+			<odometryTopic>odom</odometryTopic>
+			<odometryFrame>odom</odometryFrame>
+			<odometryRate>20.0</odometryRate>
+			<robotBaseFrame>create::base</robotBaseFrame>
+		</plugin>
+
+  </model>
+</sdf>

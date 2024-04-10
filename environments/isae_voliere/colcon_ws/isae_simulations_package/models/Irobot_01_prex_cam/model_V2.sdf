@@ -1,0 +1,54 @@
+<?xml version='1.0'?>
+<sdf version='1.7'>
+  <model name='Irobot_01_prex_cam'>
+  
+  <static>false</static>
+  
+  <inertial>
+  	<mass>2.0</mass>
+  </inertial>
+			
+    <include>
+      <uri>model://create</uri>
+    </include>
+    
+    <include>
+      <uri>model://mat_prex_cam</uri>
+      <pose>0.04 -0.045 0.079 0 0 1.570796327</pose>
+    </include>
+    
+    <include>
+      <uri>model://kinect_ros2_sensor</uri>
+      <pose>0.15 0 0.28 0 0 0</pose>
+    </include>
+    
+    <include>
+      <uri>model://d435_ros2_sensor</uri>
+      <pose>0.1 0 0.32 0 0 0</pose>
+    </include>
+    
+    <joint type="fixed" name="create_mat">
+      <child>mat_prex_cam::link</child>
+      <parent>create::base</parent>
+    </joint>
+    
+    <joint type="fixed" name="mat_kinect">
+      <child>kinect_ros2_sensor::link</child>
+      <parent>mat_prex_cam::link</parent>
+    </joint>
+    
+    <joint type="fixed" name="mat_d435">
+      <child>d435_ros2_sensor::link</child>
+      <parent>mat_prex_cam::link</parent>
+    </joint>
+    
+    <!-- Add ROS planar plugin -->
+    <plugin name="ros_planar_move" filename="libgazebo_ros_planar_move.so">
+      <ros>
+        <namespace>/irobot01</namespace>
+      </ros>
+    </plugin>
+    
+		
+  </model>
+</sdf>

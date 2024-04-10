@@ -1,0 +1,187 @@
+<?xml version='1.0'?>
+<sdf version='1.6'>
+	<model name="rover">
+		<static>false</static>
+		<!-- <pose>0 0 0.05 0 0 0</pose> -->
+		<link name='chassis'>
+			<!-- <pose>0 0 0.05 0 0 0</pose> -->
+			<inertial>
+				<mass>2.0</mass>
+			</inertial>
+			<collision name="collision">
+				<geometry>
+					<box>
+						<size>0.4 0.2 0.1</size>
+					</box>
+				</geometry>
+			</collision>
+			<visual name="visual">
+				<geometry>
+					<box>
+						<size>0.4 0.2 0.1</size>
+					</box>
+				</geometry>
+				<material>
+					<script>
+						<uri>file://media/materials/scripts/gazebo.material</uri>
+						<name>Gazebo/FlatBlack</name>
+					</script>
+				</material>
+			</visual>
+		</link>
+		<link name="left_wheel">
+			<pose>.13 0.1 -0.05 1.57 0 0</pose>
+			<inertial>
+				<mass>0.2</mass>
+			</inertial>
+			<collision name="collision">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+			</collision>
+			<visual name="visual">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+				<material>
+					<script>
+						<uri>file://media/materials/scripts/gazebo.material</uri>
+						<name>Gazebo/DarkYellow</name>
+					</script>
+				</material>
+			</visual>
+		</link>
+		<link name="left_wheel2">
+			<pose>-.13 0.1 -0.05 1.57 0 0</pose>
+			<inertial>
+				<mass>0.2</mass>
+			</inertial>
+			<collision name="collision">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+			</collision>
+			<visual name="visual">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+				<material>
+					<script>
+						<uri>file://media/materials/scripts/gazebo.material</uri>
+						<name>Gazebo/DarkYellow</name>
+					</script>
+				</material>
+			</visual>
+		</link>
+		<link name="right_wheel">
+			<pose>.13 -0.1 -0.05 1.57 0 0</pose>
+			<inertial>
+				<mass>0.2</mass>
+			</inertial>
+			<collision name="collision">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+			</collision>
+			<visual name="visual">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+				<material>
+					<script>
+						<uri>file://media/materials/scripts/gazebo.material</uri>
+						<name>Gazebo/DarkYellow</name>
+					</script>
+				</material>
+			</visual>
+		</link>
+		<link name="right_wheel2">
+			<pose>-.13 -0.1 -0.05 1.57 0 0</pose>
+			<inertial>
+				<mass>0.2</mass>
+			</inertial>
+			<collision name="collision">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+			</collision>
+			<visual name="visual">
+				<geometry>
+					<cylinder>
+						<radius>.06</radius>
+						<length>.03</length>
+					</cylinder>
+				</geometry>
+				<material>
+					<script>
+						<uri>file://media/materials/scripts/gazebo.material</uri>
+						<name>Gazebo/DarkYellow</name>
+					</script>
+				</material>
+			</visual>
+		</link>
+		<joint type="revolute" name="left_wheel_hinge">
+			<pose>0 0 0 0 0 0</pose>
+			<child>left_wheel</child>
+			<parent>chassis</parent>
+			<axis>
+				<xyz>0 0 1</xyz>
+			</axis>
+		</joint>
+		<joint type="revolute" name="left_wheel_hinge2">
+			<pose>0 0 0 0 0 0</pose>
+			<child>left_wheel2</child>
+			<parent>chassis</parent>
+			<axis>
+				<xyz>0 0 1</xyz>
+			</axis>
+		</joint>
+		<joint type="revolute" name="right_wheel_hinge">
+			<pose>0 0 0 0 0 0</pose>
+			<child>right_wheel</child>
+			<parent>chassis</parent>
+			<axis>
+				<xyz>0 0 1</xyz>
+			</axis>
+		</joint>
+		<joint type="revolute" name="right_wheel_hinge2">
+			<pose>0 0 0 0 0 0</pose>
+			<child>right_wheel2</child>
+			<parent>chassis</parent>
+			<axis>
+				<xyz>0 0 1</xyz>
+			</axis>
+		</joint>
+		<plugin name="object_controller" filename="libgazebo_ros_planar_move.so">
+			<ros>
+				<namespace>/robot</namespace>
+			</ros>
+			<odometryTopic>odom</odometryTopic>
+			<odometryFrame>odom</odometryFrame>
+			<odometryRate>20.0</odometryRate>
+			<robotBaseFrame>base_footprint</robotBaseFrame>
+		</plugin>
+
+	</model>
+</sdf>

@@ -19,7 +19,7 @@ def launch_gazebo(world_file_path: str, headless=False):
     # Start Gazebo client
     start_gazebo_client_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzclient.launch.py')),
-        condition=IfCondition(str(headless).lower()))
+        condition=IfCondition(str(not headless).lower()))
 
     # Build the launch description
     launch_description = LaunchDescription()

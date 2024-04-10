@@ -1,0 +1,48 @@
+<?xml version='1.0'?>
+<sdf version='1.6'>
+
+    <model name="mat_prex_cam">
+        <!--pose>2.0 0 0.05 0 0 0</pose-->
+      <static>1</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+          <mesh>
+            <uri>model://mat_prex_cam/meshes/untitled.dae</uri>
+          </mesh>
+          </geometry>
+        </collision>
+
+	<visual name="visual">
+          <geometry>
+          <mesh>
+            <uri>model://mat_prex_cam/meshes/untitled.dae</uri>
+          </mesh>
+          </geometry>
+                  <material>
+          <lighting>1</lighting>
+          <script>
+            <uri>file://media/materials/scripts/gazebo.material</uri>
+            <name>Gazebo/Black</name>
+          </script>
+          <shader type='pixel'>
+            <normal_map>__default__</normal_map>
+          </shader>
+          <ambient>0.5 0.5 0.5 1</ambient>
+          <diffuse>1 1 0 1</diffuse>
+          <specular>0.1 1 0.1 1</specular>
+          <emissive>0.2 0.2 0.2 1</emissive>
+        </material>
+        <transparency>0</transparency>
+        <cast_shadows>1</cast_shadows>
+          <!--material>
+              <script>
+                <uri>file://media/materials/scripts/gazebo.material</uri>
+                <name>Gazebo/Brown</name>
+              </script>
+            </material-->
+        </visual>
+      </link>
+    </model>
+
+</sdf>

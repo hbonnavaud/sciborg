@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <model name="RoverSensor">
+    <include>
+      <uri>model://rover</uri>
+    </include>
+    <include>
+      <uri>model://sensor</uri>
+    </include>
+    <joint type="fixed" name="telemeter_joint">
+      <pose>0 0 0 0 0 0</pose>
+      <child>sensor::head</child>
+      <parent>rover::chassis</parent>
+    </joint>
+  </model>
+</sdf>

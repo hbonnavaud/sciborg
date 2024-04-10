@@ -96,8 +96,6 @@ class SAC(ValueBasedAgent):
             actions_means = actor_output[:self.nb_actions]
             actions_log_stds = actor_output[self.nb_actions:]
 
-        a = 1
-
         if self.under_test or not explore:
             return actions_means, None
         else:
@@ -135,36 +133,37 @@ class SAC(ValueBasedAgent):
 
     def learn(self):
         if not self.under_test and len(self.replay_buffer) > self.batch_size:
-            observations, actions, rewards, new_observations, done = self.replay_buffer.sample(self.batch_size)
+            for _ in range(20):
+                observations, actions, rewards, new_observations, done = self.replay_buffer.sample(self.batch_size)
 
-            # Training critic
-            with torch.no_grad():
-                next_actions, next_log_probs = \
-                    self.sample_action(new_observations, use_target_network=True)
-                critic_input = torch.concat((new_observations, next_actions), dim=-1)
-                self.passed_logs.append(next_log_probs)
-                next_q_values = \
-                    self.target_critic(critic_input).view(-1)
+                # Training critic
+                with torch.no_grad():
+                    next_actions, next_log_probs = \
+                        self.sample_action(new_observations, use_target_network=True)
+                    critic_input = torch.concat((new_observations, next_actions), dim=-1)
+                    self.passed_logs.append(next_log_probs)
+                    next_q_values = \
+                        self.target_critic(critic_input).view(-1)
 
-            q_hat = self.reward_scale * rewards + self.gamma * (1 - done) * \
-                (next_q_values - self.critic_alpha * next_log_probs)
-            q_values = self.critic(torch.concat((observations, actions), dim=-1)).view(-1)
-            critic_loss = functional.mse_loss(q_values, q_hat)
-            self.critic.learn(critic_loss)
-            self.target_critic.converge_to(self.critic, tau=self.tau)
+                q_hat = self.reward_scale * rewards + self.gamma * (1 - done) * \
+                    (next_q_values - self.critic_alpha * next_log_probs)
+                q_values = self.critic(torch.concat((observations, actions), dim=-1)).view(-1)
+                critic_loss = functional.mse_loss(q_values, q_hat)
+                self.critic.learn(critic_loss)
+                self.target_critic.converge_to(self.critic, tau=self.tau)
 
-            if self.learning_step % self.policy_update_frequency == 0:
-                for _ in range(self.policy_update_frequency):
-                    # Train actor
-                    actions, log_probs = self.sample_action(observations)
-                    log_probs = log_probs.view(-1)
-                    critic_values = self.critic(torch.concat((observations, actions), dim=-1)).view(-1)
+                if self.learning_step % self.policy_update_frequency == 0:
+                    for _ in range(self.policy_update_frequency):
+                        # Train actor
+                        actions, log_probs = self.sample_action(observations)
+                        log_probs = log_probs.view(-1)
+                        critic_values = self.critic(torch.concat((observations, actions), dim=-1)).view(-1)
 
-                    actor_loss = self.actor_alpha * log_probs - critic_values
-                    actor_loss = torch.mean(actor_loss)
-                    self.actor.learn(actor_loss, retain_graph=True)
-                    self.target_actor.converge_to(self.actor, tau=self.tau)
-            self.learning_step += 1
+                        actor_loss = self.actor_alpha * log_probs - critic_values
+                        actor_loss = torch.mean(actor_loss)
+                        self.actor.learn(actor_loss, retain_graph=True)
+                        self.target_actor.converge_to(self.actor, tau=self.tau)
+                self.learning_step += 1
 
     def save(self, directory):
         super().save(directory)

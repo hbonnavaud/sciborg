@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <asset>
+    <contributor>
+      <author>Blender User</author>
+      <authoring_tool>Blender 2.79.0 commit date:2018-03-22, commit time:14:10, hash:f4dc9f9d68b</authoring_tool>
+    </contributor>
+    <created>2024-02-16T17:55:37</created>
+    <modified>2024-02-16T17:55:37</modified>
+    <unit name="meter" meter="1"/>
+    <up_axis>Z_UP</up_axis>
+  </asset>
+  <library_images>
+    <image id="toit_gris_jpg" name="toit_gris_jpg">
+      <init_from>toit_gris.jpg</init_from>
+    </image>
+    <image id="ecole_jpg" name="ecole_jpg">
+      <init_from>ecole.jpg</init_from>
+    </image>
+  </library_images>
+  <library_effects>
+    <effect id="ecole_jpg-effect">
+      <profile_COMMON>
+        <newparam sid="ecole_jpg-surface">
+          <surface type="2D">
+            <init_from>ecole_jpg</init_from>
+          </surface>
+        </newparam>
+        <newparam sid="ecole_jpg-sampler">
+          <sampler2D>
+            <source>ecole_jpg-surface</source>
+          </sampler2D>
+        </newparam>
+        <technique sid="common">
+          <phong>
+            <diffuse>
+              <texture texture="ecole_jpg-sampler" texcoord="ecole_jpg"/>
+            </diffuse>
+            <specular>
+              <color sid="specular">0 0 0 1</color>
+            </specular>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+    <effect id="toit_gris_jpg-effect">
+      <profile_COMMON>
+        <newparam sid="toit_gris_jpg-surface">
+          <surface type="2D">
+            <init_from>toit_gris_jpg</init_from>
+          </surface>
+        </newparam>
+        <newparam sid="toit_gris_jpg-sampler">
+          <sampler2D>
+            <source>toit_gris_jpg-surface</source>
+          </sampler2D>
+        </newparam>
+        <technique sid="common">
+          <phong>
+            <diffuse>
+              <texture texture="toit_gris_jpg-sampler" texcoord="toit_gris_jpg"/>
+            </diffuse>
+            <specular>
+              <color sid="specular">0 0 0 1</color>
+            </specular>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_materials>
+    <material id="ecole_jpg-material" name="ecole_jpg">
+      <instance_effect url="#ecole_jpg-effect"/>
+    </material>
+    <material id="toit_gris_jpg-material" name="toit_gris_jpg">
+      <instance_effect url="#toit_gris_jpg-effect"/>
+    </material>
+  </library_materials>
+  <library_geometries>
+    <geometry id="Cube-mesh" name="Cube">
+      <mesh>
+        <source id="Cube-mesh-positions">
+          <float_array id="Cube-mesh-positions-array" count="24">1 1 -1 1 -1 -1 -1 -0.9999998 -1 -0.9999997 1 -1 1 0.9999995 1 0.9999994 -1.000001 1 -1 -0.9999997 1 -1 1 1</float_array>
+          <technique_common>
+            <accessor source="#Cube-mesh-positions-array" count="8" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Cube-mesh-normals">
+          <float_array id="Cube-mesh-normals-array" count="36">0 0 -1 0 0 1 1 0 -2.38419e-7 0 -1 -4.76837e-7 -1 2.38419e-7 -1.49012e-7 2.68221e-7 1 2.38419e-7 0 0 -1 0 0 1 1 -5.96046e-7 3.27825e-7 -4.76837e-7 -1 0 -1 2.38419e-7 -1.19209e-7 2.08616e-7 1 0</float_array>
+          <technique_common>
+            <accessor source="#Cube-mesh-normals-array" count="12" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="Cube-mesh-map">
+          <float_array id="Cube-mesh-map-array" count="72">0 0 0 0 0 0 0.8780552 0.9063938 0.0550493 0.03328955 0.9292166 0.0336194 0.5826686 0.9998846 0.2500253 6.07938e-4 0.5827271 1.7047e-4 0.250407 0.9999222 0.08562582 4.40372e-4 0.250682 1.49186e-4 0.3331445 3.3609e-4 6.50195e-6 0.99992 1.00982e-4 8.39803e-4 0.2107087 1.71748e-4 0.3757303 0.9998838 0.2103701 0.9998548 0 0 0 0 0 0 0.8780552 0.9063938 0.1116167 0.9210561 0.0550493 0.03328955 0.5826686 0.9998846 0.2503409 0.9992257 0.2500253 6.07938e-4 0.250407 0.9999222 0.08528643 0.9998959 0.08562582 4.40372e-4 0.3331445 3.3609e-4 0.3327789 0.9999309 6.50195e-6 0.99992 0.2107087 1.71748e-4 0.3749707 4.75653e-4 0.3757303 0.9998838</float_array>
+          <technique_common>
+            <accessor source="#Cube-mesh-map-array" count="36" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="Cube-mesh-vertices">
+          <input semantic="POSITION" source="#Cube-mesh-positions"/>
+        </vertices>
+        <triangles material="ecole_jpg-material" count="8">
+          <input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Cube-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#Cube-mesh-map" offset="2" set="0"/>
+          <p>4 2 6 1 2 7 0 2 8 5 3 9 2 3 10 1 3 11 2 4 12 7 4 13 3 4 14 0 5 15 7 5 16 4 5 17 4 8 24 5 8 25 1 8 26 5 9 27 6 9 28 2 9 29 2 10 30 6 10 31 7 10 32 0 11 33 3 11 34 7 11 35</p>
+        </triangles>
+        <triangles material="toit_gris_jpg-material" count="2">
+          <input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Cube-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#Cube-mesh-map" offset="2" set="0"/>
+          <p>7 1 3 5 1 4 4 1 5 7 7 21 6 7 22 5 7 23</p>
+        </triangles>
+        <triangles count="2">
+          <input semantic="VERTEX" source="#Cube-mesh-vertices" offset="0"/>
+          <input semantic="NORMAL" source="#Cube-mesh-normals" offset="1"/>
+          <input semantic="TEXCOORD" source="#Cube-mesh-map" offset="2" set="0"/>
+          <p>0 0 0 2 0 1 3 0 2 0 6 18 1 6 19 2 6 20</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_controllers/>
+  <library_visual_scenes>
+    <visual_scene id="Scene" name="Scene">
+      <node id="Cube" name="Cube" type="NODE">
+        <matrix sid="transform">0.2499999 0 0 0 0 0.4999998 0 0 0 0 0.25 0.25 0 0 0 1</matrix>
+        <instance_geometry url="#Cube-mesh" name="Cube">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="ecole_jpg-material" target="#ecole_jpg-material">
+                <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
+              </instance_material>
+              <instance_material symbol="toit_gris_jpg-material" target="#toit_gris_jpg-material">
+                <bind_vertex_input semantic="UVMap" input_semantic="TEXCOORD" input_set="0"/>
+              </instance_material>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+      </node>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#Scene"/>
+  </scene>
+</COLLADA>

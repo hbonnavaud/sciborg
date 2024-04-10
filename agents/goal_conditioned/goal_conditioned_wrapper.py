@@ -33,7 +33,7 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         assert isinstance(goal_space, Box), "The goal space should be an instance of gym.spaces.Box."
 
         # Super class init + add to self.init_params, parameters that are not send to it.
-        GoalConditionedAgent.__init__(self, observation_space, action_space, **params)
+        GoalConditionedAgent.__init__(self, observation_space, action_space, goal_space=self.goal_space, **params)
         self.init_params["reinforcement_learning_agent_class"] = reinforcement_learning_agent_class
         self.init_params["goal_space"] = goal_space
         self.init_params["goal_from_observation_fun"] = goal_from_observation_fun
@@ -48,14 +48,6 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
 
         # Instantiate wrapped agent
         self.reinforcement_learning_agent_class = reinforcement_learning_agent_class
-
-        # Compute our agent new observation space as a goal-conditioned observation space (a concatenation of
-        # our observation space and our goal space)
-
-        self.get_goal_from_observation = goal_from_observation_fun
-        if goal_from_observation_fun is None:
-            self.get_goal_from_observation = lambda observation: observation.copy()
-
         self.reinforcement_learning_agent: ValueBasedAgent = \
             reinforcement_learning_agent_class(self.feature_space, action_space, **params)
 
@@ -101,10 +93,12 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         else:
             raise NotImplementedError("State space ang goal space with different types are not supported.")
 
-    def get_value(self, observation, goal, actions=None):
+    def get_value(self, *information, actions=None):
+        observation, goal = information
         return self.reinforcement_learning_agent.get_value(self.get_features(observation, goal), actions)
 
-    def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
+    def start_episode(self, *information, test_episode=False):
+        observation, goal = information
         super().start_episode(observation, test_episode)
         self.current_goal = goal
         self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_goal), test_episode)

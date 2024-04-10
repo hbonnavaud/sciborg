@@ -1,8 +1,7 @@
 from .environment import Environment
 from .goal_conditioned_environment import GoalConditionedEnvironment
-from .grid_world import *
-from .point_maze import *
 from .robotic_environment import *
+from .point_maze import *
 
 failed_one_import = False
 

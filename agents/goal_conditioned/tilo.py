@@ -54,5 +54,5 @@ class TILO(HER):
         features = observations.copy()
         observation_as_goal = self.goal_from_observation_fun(observations)
         observation_goal_diff = goals - observation_as_goal
-        features[:, self.goal_shape[0]] = observation_goal_diff
+        features[..., :self.goal_shape[0]] = observation_goal_diff
         return features

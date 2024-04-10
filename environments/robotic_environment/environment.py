@@ -2,7 +2,7 @@ import time
 from enum import Enum
 import random
 from multiprocessing import Process
-from launch_gazebo import launch_gazebo
+from environments.robotic_environment.launch_gazebo import launch_gazebo
 import numpy as np
 from gym.spaces import Box
 from std_srvs.srv import Empty
@@ -42,7 +42,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                  map_name: str = RobotMapsIndex.FOUR_ROOMS.value,
                  robot_name: str = RobotsIndex.IROBOT.value,
                  environment_size_scale: float = 0.5,
-                 headless: bool=False,
+                 headless: bool = False,
 
                  # Environment behaviour settings
                  real_time: bool = True,
@@ -123,7 +123,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.maze_array, world_file_path = generate_xml(map_name, robot_name, scale=self.environment_size_scale)
 
         # Launch gazebo using the launch file and the robot
-        p = Process(target=launch_gazebo, args=(str(world_file_path, headless),))  # TODO add robot sdf file, maybe later
+        p = Process(target=launch_gazebo, args=(str(world_file_path), headless,))  # TODO add robot sdf file, maybe later
         p.start()
 
         # At this time, gazebo is launching. We wait until we can find the mandatory reset_world service (which means
@@ -242,7 +242,8 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             while self.last_position_message is None:
                 rclpy.spin_once(self.node)
                 time.sleep(0.1)
-        if self.last_lidar_message is None:
+
+        if self.use_lidar and self.last_lidar_message is None:
             print("Waiting for lidar topic ...")
             while self.last_lidar_message is None:
                 rclpy.spin_once(self.node)

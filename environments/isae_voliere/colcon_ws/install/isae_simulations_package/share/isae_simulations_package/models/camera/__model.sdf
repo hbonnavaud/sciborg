@@ -1,0 +1,73 @@
+<?xml version='1.0'?>
+<sdf version='1.6'>
+        <model name="camera">
+                <static>false</static>
+                <link name='cameralink'>
+                      <collision name="collision">
+                        <geometry>
+                          <box>
+                            <size>0.05 0.05 0.05</size>
+                          </box>
+                        </geometry>
+                      </collision>
+                      <visual name="visual">
+                        <geometry>
+                          <box>
+                            <size>0.05 0.05 0.05</size>
+                          </box>
+                        </geometry>
+                      </visual>
+
+<sensor type="camera" name="sensor_name_camera">
+  ...
+
+  <!-- Set always_on only sensor, not on plugin -->
+  <always_on>0</always_on>
+
+  <!-- Set update_rate only sensor, not on plugin -->
+  <update_rate>1</update_rate>
+
+  <camera name="camera_name">
+    ...
+    <distortion>
+      <k1>0.1</k1>
+      <k2>0.2</k2>
+      <k3>0.3</k3>
+      <p1>0.4</p1>
+      <p2>0.5</p2>
+      <center>0.5 0.5</center>
+    </distortion>
+  </camera>
+
+  <!-- Use camera, not camera_triggered -->
+  <plugin name="plugin_name" filename="libgazebo_ros_camera.so">
+    <!-- Change namespace, camera name and topics so -
+         * Images are published to: /custom_ns/custom_camera/custom_image
+         * Camera info is published to: /custom_ns/custom_camera/custom_info
+         * Trigger is received on: /custom_ns/custom_camera/custom_trigger
+    -->
+    <ros>
+      <namespace>custom_ns</namespace>
+      <remapping>image_raw:=custom_img</remapping>
+      <remapping>camera_info:=custom_info</remapping>
+      <remapping>image_trigger:=custom_trigger</remapping>
+    </ros>
+
+    <!-- Set camera name. If empty, defaults to sensor name (i.e. "sensor_name") -->
+    <camera_name>custom_camera</camera_name>
+
+    <!-- Set TF frame name. If empty, defaults to link name (i.e. "link_name") -->
+    <frame_name>custom_frame</frame_name>
+
+    <!-- Set to true to turn on triggering -->
+    <triggered>true</triggered>
+
+    <hack_baseline>0.07</hack_baseline>
+
+    <!-- No need to repeat distortion parameters or to set autoDistortion -->
+  </plugin>
+</sensor>
+
+                </link>
+        </model>
+</sdf>
