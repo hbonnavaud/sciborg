@@ -106,12 +106,12 @@ class Agent(ABC):
                 torch.save(v.observation_dict(), os.path.join(directory, k + ".pt"))
             if isinstance(v, (int, str)):
                 # Store in a json file every variable that might be easy to read by a human, so we can easily access to
-                # some informations without building a python script
+                # some information without building a python script
                 save_in_json[k] = v
             else:
                 # We consider the others attributes as too complex to be read by human (do you really want to take a
                 # look in a replay buffer without a script?) so we will store them in a binary file to save space
-                # and because some of them cannot be saved in a json file (like numpy arrays.
+                # and because some of them cannot be saved in a json file like numpy arrays.
                 save_in_pickle[k] = v
         json.dump(save_in_json, open(os.path.join(directory, "basic_attributes.json"), "w"))
         pickle.dump(save_in_pickle, open(os.path.join(directory, "objects_attributes.pk"), "wb"))
@@ -125,7 +125,7 @@ class Agent(ABC):
             saved_in_json = json.load(open(os.path.join(directory, "basic_attributes.json"), "r"))
             for k, v in saved_in_json.items():
                 self.__setattr__(k, v)
-        except Exception as e:
+        except FileNotFoundError:
             pass
 
         # Load attributes in objects_attributes.pk
@@ -133,7 +133,7 @@ class Agent(ABC):
             saved_in_pickle = pickle.load(open(os.path.join(directory, "objects_attributes.pk"), "rb"))
             for k, v in saved_in_pickle.items():
                 self.__setattr__(k, v)
-        except Exception as e:
+        except FileNotFoundError:
             pass
 
         # Load the rest
