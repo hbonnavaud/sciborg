@@ -1,30 +1,19 @@
-import importlib
-import pathlib
 import time
 from enum import Enum
-import math
 import random
 from multiprocessing import Process
 from launch_gazebo import launch_gazebo
 import numpy as np
-import matplotlib.pyplot as plt
 from gym.spaces import Box
-from launch import LaunchService
 from std_srvs.srv import Empty
-from sympy import Quaternion
 from environments.robotic_environment.simulations_assets.build_world_from_map import generate_xml
 from environments.goal_conditioned_environment import GoalConditionedEnvironment
-
-import subprocess
 import rclpy
-from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
-from rclpy.node import Node
+from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped
 from rclpy.qos import QoSProfile
-from utils import get_euler_from_quaternion
-import matplotlib.pyplot as plt
 
 
 class TileType(Enum):
@@ -61,8 +50,9 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                  reward_at_collision: float = None,          # Set the reward given at collision.
                  reward_once_reached: float = 0,
                  sparse_reward: bool = True,
-                 max_velocity: np.ndarray = np.array([0.5, 1.5]),
-                 max_action: np.ndarray = np.array([0.1, 0.3]),
+
+                 max_velocity: np.ndarray = np.array([0.5, 1]),
+                 max_action: np.ndarray = np.array([0.2, 0.4]),
 
                  # State composition and settings
                  use_lidar: bool = False,
@@ -121,7 +111,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
         # Build .world file from the given map
         self.maze_array, world_file_path = generate_xml(map_name, robot_name, scale=self.environment_size_scale)
-
 
         # Launch gazebo using the launch file and the robot
         p = Process(target=launch_gazebo, args=(str(world_file_path),))  # TODO add robot sdf file, maybe later
