@@ -38,16 +38,18 @@ class RobotMapsIndex(Enum):
 class SingleRobotEnvironment(GoalConditionedEnvironment):
 
     def __init__(self,
+                 # simulation parameters
                  map_name: str = RobotMapsIndex.FOUR_ROOMS.value,
                  robot_name: str = RobotsIndex.IROBOT.value,
                  environment_size_scale: float = 0.5,
+                 headless: bool=False,
 
                  # Environment behaviour settings
                  real_time: bool = True,
                  simulation_step_duration: float = 0.1,  # UNUSED if real_time=True
                  goal_reachability_threshold: float = 0.40,
                  collision_distance_threshold: float = 0.30,
-                 reward_at_collision: float = None,          # Set the reward given at collision.
+                 reward_at_collision: float = None,  # Set the reward given at collision.
                  reward_once_reached: float = 0,
                  sparse_reward: bool = True,
 
@@ -56,12 +58,20 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
                  # State composition and settings
                  use_lidar: bool = False,
-                 lidar_max_angle: float = None,     # USELESS if variable use_lidar is false
-                 nb_lidar_beams: int = 20,          # USELESS if variable use_lidar is false
+                 lidar_max_angle: float = None,  # USELESS if variable use_lidar is false
+                 nb_lidar_beams: int = 20,  # USELESS if variable use_lidar is false
                  use_odometry: bool = False,  # Use odometry topic as position/orientation (instead of /pose by default)
                  ):
 
         """
+        # Simulation settings
+        :params map_name: str, name of the map, the environment will load the map located at ./simulation_assets/maps/
+            {map_name}.py
+        :params robot_name: str, name of the robot, the environment will load the map located at ./simulation_assets/
+            maps/worlds/building_assets/robots/{robot_name}.xml
+        :params environment_size_scale: float, size of an element of the map_array, in the gazebo .world file.
+        :params headless: bool, whether to launch the gazebo client or not
+
         # Environment behaviour settings
         :params real_time: bool, whether to pause the simulation, and play it for a fixed duration at each step, or let
             it run and interact with it in real time.
@@ -113,7 +123,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.maze_array, world_file_path = generate_xml(map_name, robot_name, scale=self.environment_size_scale)
 
         # Launch gazebo using the launch file and the robot
-        p = Process(target=launch_gazebo, args=(str(world_file_path),))  # TODO add robot sdf file, maybe later
+        p = Process(target=launch_gazebo, args=(str(world_file_path, headless),))  # TODO add robot sdf file, maybe later
         p.start()
 
         # At this time, gazebo is launching. We wait until we can find the mandatory reset_world service (which means
@@ -352,4 +362,3 @@ if __name__ == "__main__":
         for step_id in range(500):
             print("Step {}".format(step_id))
             env.step(env.action_space.sample())
-    

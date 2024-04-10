@@ -9,18 +9,17 @@ from launch.substitutions import PathJoinSubstitution, TextSubstitution, PythonE
 from launch_ros.substitutions import FindPackageShare
 
 
-def launch_gazebo(world_file_path: str, use_simulator=True, headless=False):
+def launch_gazebo(world_file_path: str, headless=False):
 
     pkg_gazebo_ros = FindPackageShare(package='gazebo_ros').find('gazebo_ros')
     start_gazebo_server_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzserver.launch.py')),
-        condition=IfCondition(str(use_simulator).lower()),
         launch_arguments={'world': world_file_path}.items())
 
     # Start Gazebo client
     start_gazebo_client_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(os.path.join(pkg_gazebo_ros, 'launch', 'gzclient.launch.py')),
-        condition=IfCondition(str(use_simulator and not headless).lower()))
+        condition=IfCondition(str(headless).lower()))
 
     # Build the launch description
     launch_description = LaunchDescription()
