@@ -1,5 +1,5 @@
 import numpy as np
-from gym.spaces import Box
+from gym.spaces import Box, Discrete
 from agents.goal_conditioned.her import HER
 
 
@@ -13,24 +13,36 @@ class TILO(HER):
                  reinforcement_learning_agent_class,
                  observation_space,
                  action_space,
-                 goal_from_observation_fun,
-                 **params):
+                 goal_from_observation_fun=None,
+                 get_features=None,
+                 goal_space=None,):
+        """
+        :param reinforcement_learning_agent_class: The class of an agent that will be wrapped by this instance.
+        :param observation_space: gym.spaces.Space observation space.
+        :param action_space: gym.spaces.Space, action space.
+        :param goal_from_observation_fun: A function that takes an observation and returns the goal that belongs to it.
+            aka. a projection of the state space into the goal space.
+        :param get_features: A function that build, from an observation and a goal, features that will be given to the
+            wrapped agent. Those features should make the wrapped agent's control policy TILO.
+        :param goal_space: gym.spaces.Space goal space.
+        """
 
-        assert isinstance(observation_space, Box), "The observation space should be an instance of gym.spaces.Box. " \
-                                             "Discrete observation space is not supported."
-        self.goal_space = params.get("goal_space", observation_space)
-        if params.get("get_features", None) is not None:
-            self.get_features = params.get("get_features", None)
-            assert hasattr(self.get_features, "__call__")  # Make sure it is a function
-        else:
-            # Otherwise we need a observation to goal projection for the default "get_features" function.
-            self.observation_to_goal_filter = params.get("observation_to_goal_filter", None)
-            if self.observation_to_goal_filter is None:
-                self.observation_to_goal_filter = np.zeros(observation_space.shape).astype(int)
-                self.observation_to_goal_filter[np.where(np.ones(self.goal_space.shape))] = 1
+        assert isinstance(action_space, (Box, Discrete)), ("The goal space should be an instance of gym.spaces.Box or "
+                                                           "gym.space.Discrete.")
+        assert isinstance(observation_space, Box), "The observation space should be an instance of gym.spaces.Box."
+        self.goal_space = observation_space if goal_space is None else goal_space
+        assert isinstance(goal_space, Box), "The goal space should be an instance of gym.spaces.Box."
+
+        self.goal_from_observation_fun = goal_from_observation_fun
+        if self.goal_from_observation_fun is None:
+            self.goal_from_observation_fun = lambda observation: observation[..., :self.goal_space.shape[-1]]
+
+        if get_features is not None:
+            assert hasattr(get_features, "__call__"), "The get_features argument should be a function."
+            self.get_features = get_features
 
         super().__init__(reinforcement_learning_agent_class, observation_space, action_space,
-                         goal_from_observation_fun, **params)
+                         goal_from_observation_fun, goal_space=goal_space)
 
         self.name = self.reinforcement_learning_agent.name + " + TILO"
 
@@ -44,12 +56,7 @@ class TILO(HER):
 
     def get_features(self, observations, goals):
         features = observations.copy()
-        if len(observations.shape) == 1:
-            a = self.get_goal_from_observation(observations)
-            b = goals
-            observation_goal_diff = goals - self.get_goal_from_observation(observations)
-            features[:self.goal_shape[0]] = observation_goal_diff
-        else:
-            observation_goal_diff = goals - observations[:, self.observation_to_goal_filter]
-            features[:, self.goal_shape[0]] = observation_goal_diff
+        observation_as_goal = self.goal_from_observation_fun(observations)
+        observation_goal_diff = goals - observation_as_goal
+        features[:, self.goal_shape[0]] = observation_goal_diff
         return features
