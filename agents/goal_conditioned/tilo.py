@@ -27,14 +27,17 @@ class TILO(HER):
         :param goal_space: gym.spaces.Space goal space.
         """
 
+        self.goal_space = observation_space if goal_space is None else goal_space
         assert isinstance(action_space, (Box, Discrete)), ("The goal space should be an instance of gym.spaces.Box or "
                                                            "gym.space.Discrete.")
         assert isinstance(observation_space, Box), "The observation space should be an instance of gym.spaces.Box."
-        self.goal_space = observation_space if goal_space is None else goal_space
         assert isinstance(goal_space, Box), "The goal space should be an instance of gym.spaces.Box."
 
         self.goal_from_observation_fun = goal_from_observation_fun
         if self.goal_from_observation_fun is None:
+            if len(goal_space.shape) > 1:
+                raise ValueError("Your goal space have a shape bigger than one. The default 'goal_from_observation_fun'"
+                                 " might not fit for you. Please set it in the __init__ arguments.")
             self.goal_from_observation_fun = lambda observation: observation[..., :self.goal_space.shape[-1]]
 
         if get_features is not None:
