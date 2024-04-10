@@ -6,7 +6,6 @@ from typing import Union
 
 import gym
 from gym.spaces import Box, Discrete
-import numpy as np
 import torch
 from abc import ABC, abstractmethod
 
@@ -53,7 +52,8 @@ class Agent(ABC):
         self.under_test = False
         self.episode_started = False
 
-    def start_episode(self, observation: np.ndarray, test_episode=False):
+    def start_episode(self, *information, test_episode=False):
+        (observation,) = information
         if self.episode_started:
             self.stop_episode()
         self.episode_started = True

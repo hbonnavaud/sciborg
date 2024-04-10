@@ -80,13 +80,12 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         else:
             raise NotImplementedError("State space ang goal space with different types are not supported.")
 
-    def get_value(self, observation, goal, actions=None):
-        return self.reinforcement_learning_agent.get_value(self.get_features(observation, goal), actions)
+    def get_value(self, *information, actions=None):
+        return self.reinforcement_learning_agent.get_value(self.get_features(*information), actions)
 
-    def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
-        GoalConditionedAgent.start_episode(self, observation, goal, test_episode)
-        wrapped_agent_observation = self.get_features(observation, self.current_goal)
-        self.reinforcement_learning_agent.start_episode(wrapped_agent_observation, test_episode)
+    def start_episode(self, *information, test_episode=False):
+        super().start_episode(*information, test_episode=test_episode)
+        self.reinforcement_learning_agent.start_episode(self.get_features(*information), test_episode)
 
     def action(self, observation, explore=True):
         wrapped_agent_observation = self.get_features(observation, self.current_goal)

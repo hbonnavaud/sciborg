@@ -25,9 +25,9 @@ class HER(GoalConditionedWrapper):
         self.nb_resample_per_observations = 4
         self.name = self.reinforcement_learning_agent.name + " + HER"
 
-    def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
+    def start_episode(self, *information, test_episode=False):
         self.last_trajectory = []
-        return super().start_episode(observation, goal, test_episode)
+        return super().start_episode(*information, test_episode=test_episode)
 
     def process_interaction(self, action, new_observation, reward, done, learn=True):
         if learn and not self.under_test:

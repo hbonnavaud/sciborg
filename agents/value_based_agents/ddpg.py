@@ -34,11 +34,12 @@ class DDPG(ValueBasedAgent):
         self.steps_before_target_update = params.get("steps_before_target_update", 5)
         self.steps_since_last_update = 0
 
-        self.actor = MLP(self.state_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
+        self.actor = MLP(self.observation_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
                          self.nb_actions, Tanh(), learning_rate=self.actor_lr, optimizer_class=optim.Adam,
                          device=self.device).float()
-        self.critic = MLP(self.state_size + self.nb_actions, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(), 1,
-                         learning_rate=self.critic_lr, optimizer_class=optim.Adam, device=self.device).float()
+        self.critic = MLP(self.observation_size + self.nb_actions, self.layer_1_size, ReLU(),
+                          self.layer_2_size, ReLU(), 1, learning_rate=self.critic_lr, optimizer_class=optim.Adam,
+                          device=self.device).float()
 
         self.target_actor = deepcopy(self.actor)
         self.target_critic = deepcopy(self.critic)
@@ -90,7 +91,7 @@ class DDPG(ValueBasedAgent):
                 target_actions = self.scale_action(target_actions, Box(-1, 1, (self.nb_actions,)))
                 critic_value_ = self.target_critic(torch.concat((new_states, target_actions), dim=-1))
             critic_value = self.critic(torch.concat((states, actions), dim=-1))
-            #target = torch.addcmul(rewards, self.gamma, 1 - dones, critic_value_.squeeze()).view(self.batch_size, 1)
+            # target = torch.addcmul(rewards, self.gamma, 1 - dones, critic_value_.squeeze()).view(self.batch_size, 1)
             target = (rewards + self.gamma * (1 - dones) * critic_value_.squeeze()).view(self.batch_size, 1)
             critic_loss = torch.nn.functional.mse_loss(target, critic_value)
             self.critic.learn(critic_loss)

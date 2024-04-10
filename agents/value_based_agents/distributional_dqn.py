@@ -6,7 +6,7 @@ from torch.nn import ReLU, Tanh
 from agents.value_based_agents.dqn import DQN
 from agents.utils.nn import MLP
 from torch import optim
-import torch.nn.functional as F
+import torch.nn.functional as torch_fun
 
 from utils import create_dir
 
@@ -67,7 +67,7 @@ class DistributionalDQN(DQN):
         for model_id in range(self.nb_models):
             value = models[model_id](observations)
             value = value.reshape(new_shape)
-            value = F.softmax(value, dim=-1)
+            value = torch_fun.softmax(value, dim=-1)
             q_values_probs.append(value)
         return torch.stack(q_values_probs).mean(0)
 
@@ -118,7 +118,7 @@ class DistributionalDQN(DQN):
             #   shape: [[1, 0, 0, ...],
             #           [1, 0, 0, ...], ... ]
 
-            reached_target_distribution = F.one_hot(torch.zeros(self.batch_size).to(dtype=torch.long),
+            reached_target_distribution = torch_fun.one_hot(torch.zeros(self.batch_size).to(dtype=torch.long),
                                                     self.out_dist_size).to(self.device)
 
             # - Target distribution for samples where the goal hasn't been reached
@@ -140,7 +140,7 @@ class DistributionalDQN(DQN):
                 model_distribution = model(observations).reshape((self.batch_size, self.nb_actions, self.out_dist_size))
                 a = actions.to(torch.long).repeat((self.out_dist_size, 1)).T.unsqueeze(1)
                 model_distribution = model_distribution.gather(1, a).squeeze()
-                model_loss = F.cross_entropy(model_distribution, target_distribution)
+                model_loss = torch_fun.cross_entropy(model_distribution, target_distribution)
                 model.learn(model_loss)
                 loss_copy = model_loss.detach().cpu().item()
                 self.errors["model_" + str(model_id)].append(loss_copy)
