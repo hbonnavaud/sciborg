@@ -18,15 +18,36 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
     goal_conditioned_action = agent.action()
 
     """
+    def __init__(self,
+                 reinforcement_learning_agent_class,
+                 observation_space: Union[Box, Discrete],
+                 action_space: Union[Box, Discrete],
+                 goal_space=None,
+                 goal_from_observation_fun=None,
+                 **params):
+        self.goal_space = observation_space if goal_space is None else goal_space
+        assert issubclass(reinforcement_learning_agent_class, ValueBasedAgent)
+        assert isinstance(action_space, (Box, Discrete)), ("The goal space should be an instance of gym.spaces.Box or "
+                                                           "gym.space.Discrete.")
+        assert isinstance(observation_space, Box), "The observation space should be an instance of gym.spaces.Box."
+        assert isinstance(goal_space, Box), "The goal space should be an instance of gym.spaces.Box."
 
-    def __init__(self, reinforcement_learning_agent_class, observation_space: Union[Box, Discrete],
-                 action_space: Union[Box, Discrete], goal_from_observation_fun, **params):
-
+        # Super class init + add to self.init_params, parameters that are not send to it.
         GoalConditionedAgent.__init__(self, observation_space, action_space, **params)
-
-        self.reinforcement_learning_agent_class = reinforcement_learning_agent_class
         self.init_params["reinforcement_learning_agent_class"] = reinforcement_learning_agent_class
+        self.init_params["goal_space"] = goal_space
         self.init_params["goal_from_observation_fun"] = goal_from_observation_fun
+
+        # Setup goal_from_observation_fun
+        self.goal_from_observation_fun = goal_from_observation_fun
+        if self.goal_from_observation_fun is None:
+            if len(goal_space.shape) > 1:
+                raise ValueError("Your goal space have a shape bigger than one. The default 'goal_from_observation_fun'"
+                                 " might not fit for you. Please set it in the __init__ arguments.")
+            self.goal_from_observation_fun = lambda observation: observation[..., :self.goal_space.shape[-1]]
+
+        # Instantiate wrapped agent
+        self.reinforcement_learning_agent_class = reinforcement_learning_agent_class
 
         # Compute our agent new observation space as a goal-conditioned observation space (a concatenation of
         # our observation space and our goal space)
@@ -80,16 +101,16 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         else:
             raise NotImplementedError("State space ang goal space with different types are not supported.")
 
-    def get_value(self, *information, actions=None):
-        return self.reinforcement_learning_agent.get_value(self.get_features(*information), actions)
+    def get_value(self, observation, goal, actions=None):
+        return self.reinforcement_learning_agent.get_value(self.get_features(observation, goal), actions)
 
-    def start_episode(self, *information, test_episode=False):
-        super().start_episode(*information, test_episode=test_episode)
-        self.reinforcement_learning_agent.start_episode(self.get_features(*information), test_episode)
+    def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
+        super().start_episode(observation, test_episode)
+        self.current_goal = goal
+        self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_goal), test_episode)
 
     def action(self, observation, explore=True):
-        wrapped_agent_observation = self.get_features(observation, self.current_goal)
-        return self.reinforcement_learning_agent.action(wrapped_agent_observation, explore)
+        return self.reinforcement_learning_agent.action(self.get_features(observation, self.current_goal), explore)
 
     def process_interaction(self, action, reward, new_observation, done, learn=True):
         super().process_interaction(action, reward, new_observation, done, learn=learn)

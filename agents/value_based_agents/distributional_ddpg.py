@@ -6,7 +6,7 @@ from torch.nn import ReLU, Tanh
 from agents.value_based_agents.ddpg import DDPG
 from agents.utils.nn import MLP
 from torch import optim
-import torch.nn.functional as torch_fun
+import torch.nn.functional as F
 
 from utils import create_dir
 
@@ -69,7 +69,7 @@ class DistributionalDDPG(DDPG):
                 actions = self.actor(observations).detach().numpy()
             critics = self.target_critics if use_target else self.critics
             critic_inputs = np.concatenate((observations, actions), -1)
-            q_values_probs = [torch_fun.softmax(critic(critic_inputs), dim=-1) for critic in critics]
+            q_values_probs = [F.softmax(critic(critic_inputs), dim=-1) for critic in critics]
             q_values_probs = torch.stack(q_values_probs).min(0).values
             q_values = (q_values_probs * torch.tensor(self.out_dist_abscissa)).sum(dim=-1)
         return q_values if gradient else q_values.detach().cpu().numpy()
@@ -82,7 +82,7 @@ class DistributionalDDPG(DDPG):
             with torch.no_grad():
                 target_actions = self.target_actor.forward(new_observations)
                 target_critic_inputs = np.concatenate((new_observations, target_actions), -1)
-                target_q_values_probabilities = [torch_fun.softmax(critic(target_critic_inputs), dim=-1)
+                target_q_values_probabilities = [F.softmax(critic(target_critic_inputs), dim=-1)
                                                  for critic in self.target_critics]
                 target_q_values_probabilities = torch.stack(target_q_values_probabilities).mean(0)
 
@@ -92,7 +92,7 @@ class DistributionalDDPG(DDPG):
             # - Target distributions for samples where the goal has been reached
             #   shape: [[1, 0, 0, ...],
             #           [1, 0, 0, ...], ... ]
-            reached_target_distribution = torch_fun.one_hot(torch.zeros(self.batch_size).to(dtype=torch.long),
+            reached_target_distribution = F.one_hot(torch.zeros(self.batch_size).to(dtype=torch.long),
                                                     self.out_dist_size)
 
             # - Target distribution for samples where the goal hasn't been reached
@@ -112,14 +112,14 @@ class DistributionalDDPG(DDPG):
             for critic_id in range(self.nb_critics):
                 critic = self.critics[critic_id]
                 critic_distribution = critic(torch.concat((observations, actions), dim=-1))
-                critic_loss = torch_fun.cross_entropy(critic_distribution, target_distribution)
+                critic_loss = F.cross_entropy(critic_distribution, target_distribution)
                 critic.learn(critic_loss)
                 self.target_critics[critic_id].converge_to(critic, tau=self.tau)
 
             # Train actor
             actions = self.actor(observations)
             actor_input = torch.concat((observations, actions), dim=-1)
-            q_values_probs = [torch_fun.softmax(critic(actor_input), dim=-1) for critic in self.critics]
+            q_values_probs = [F.softmax(critic(actor_input), dim=-1) for critic in self.critics]
             q_values_probs = torch.stack(q_values_probs).min(0).values
             q_values = (q_values_probs * torch.tensor(self.out_dist_abscissa)).sum(dim=-1)
             self.actor.learn(torch.mean(- q_values))

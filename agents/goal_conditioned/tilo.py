@@ -1,4 +1,5 @@
 import numpy as np
+from typing import Union
 from gym.spaces import Box, Discrete
 from agents.goal_conditioned.her import HER
 
@@ -11,11 +12,12 @@ class TILO(HER):
 
     def __init__(self,
                  reinforcement_learning_agent_class,
-                 observation_space,
-                 action_space,
+                 observation_space: Union[Box, Discrete],
+                 action_space: Union[Box, Discrete],
+                 goal_space: Union[Box, Discrete] = None,
                  goal_from_observation_fun=None,
                  get_features=None,
-                 goal_space=None,):
+                 **params):
         """
         :param reinforcement_learning_agent_class: The class of an agent that will be wrapped by this instance.
         :param observation_space: gym.spaces.Space observation space.
@@ -27,26 +29,17 @@ class TILO(HER):
         :param goal_space: gym.spaces.Space goal space.
         """
 
-        self.goal_space = observation_space if goal_space is None else goal_space
-        assert isinstance(action_space, (Box, Discrete)), ("The goal space should be an instance of gym.spaces.Box or "
-                                                           "gym.space.Discrete.")
-        assert isinstance(observation_space, Box), "The observation space should be an instance of gym.spaces.Box."
-        assert isinstance(goal_space, Box), "The goal space should be an instance of gym.spaces.Box."
+        # Super class init + add to self.init_params, parameters that are not send to it.
+        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, goal_space=goal_space,
+                         goal_from_observation_fun=goal_from_observation_fun, **params)
+        self.init_params["get_features"] = get_features
 
-        self.goal_from_observation_fun = goal_from_observation_fun
-        if self.goal_from_observation_fun is None:
-            if len(goal_space.shape) > 1:
-                raise ValueError("Your goal space have a shape bigger than one. The default 'goal_from_observation_fun'"
-                                 " might not fit for you. Please set it in the __init__ arguments.")
-            self.goal_from_observation_fun = lambda observation: observation[..., :self.goal_space.shape[-1]]
-
+        # Initialise self.get_features
         if get_features is not None:
             assert hasattr(get_features, "__call__"), "The get_features argument should be a function."
             self.get_features = get_features
 
-        super().__init__(reinforcement_learning_agent_class, observation_space, action_space,
-                         goal_from_observation_fun, goal_space=goal_space)
-
+        # Modify instance name
         self.name = self.reinforcement_learning_agent.name + " + TILO"
 
     @property

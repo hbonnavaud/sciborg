@@ -52,12 +52,8 @@ class Agent(ABC):
         self.under_test = False
         self.episode_started = False
 
-    def start_episode(self, *information, test_episode=False):
-        """
-        *information instead of observation alone because child classes can put a lot of stuff at this place,
-        like skill id, goal to reach, or whatever people imagination think about.
-        """
-        (observation,) = information
+    def start_episode(self, *episode_info, test_episode=False):
+        (observation,) = episode_info
         if self.episode_started:
             self.stop_episode()
         self.episode_started = True

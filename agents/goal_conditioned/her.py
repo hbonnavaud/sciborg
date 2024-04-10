@@ -1,7 +1,12 @@
 # Goal conditioned agent
 from random import randrange
+from typing import Union
+
 import numpy as np
+from gym.spaces import Box, Discrete
+
 from .goal_conditioned_wrapper import GoalConditionedWrapper
+from ..value_based_agents.value_based_agent import ValueBasedAgent
 
 
 class HER(GoalConditionedWrapper):
@@ -12,22 +17,27 @@ class HER(GoalConditionedWrapper):
 
     def __init__(self,
                  reinforcement_learning_agent_class,
-                 observation_space,
-                 action_space,
-                 goal_from_observation_fun,
+                 observation_space: Union[Box, Discrete],
+                 action_space: Union[Box, Discrete],
+                 goal_space: Union[Box, Discrete] = None,
+                 goal_from_observation_fun=None,
+                 nb_resample_per_observations: int = 4,
                  **params):
 
-        super().__init__(reinforcement_learning_agent_class, observation_space, action_space,
-                         goal_from_observation_fun, **params)
+        # Super class init
+        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, goal_space=goal_space,
+                         goal_from_observation_fun=goal_from_observation_fun, **params)
 
+        # Trajectory relabelling attributes
         self.last_trajectory = []
-        # ... and store relabelling parameters
-        self.nb_resample_per_observations = 4
+        self.nb_resample_per_observations = nb_resample_per_observations
+
+        # Modify instance name
         self.name = self.reinforcement_learning_agent.name + " + HER"
 
-    def start_episode(self, *information, test_episode=False):
+    def start_episode(self, observation: np.ndarray, goal: np.ndarray, test_episode=False):
         self.last_trajectory = []
-        return super().start_episode(*information, test_episode=test_episode)
+        return super().start_episode(observation, goal, test_episode)
 
     def process_interaction(self, action, new_observation, reward, done, learn=True):
         if learn and not self.under_test:

@@ -24,8 +24,6 @@ class GoalConditionedAgent(Agent, ABC):
         assert isinstance(self.goal_space, Box) or isinstance(self.goal_space, Discrete)
         self.goal_shape = self.goal_space.shape
 
-    def start_episode(self, *information, test_episode=False):
-        observation, goal = information
+    def start_episode(self, *episode_info, test_episode=False):
+        observation, goal = episode_info
         super().start_episode(observation, test_episode=test_episode)
-        self.current_goal = goal
-
