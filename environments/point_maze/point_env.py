@@ -244,3 +244,6 @@ class PointEnv(Environment):
         plt.ylim([0, 1])
         plt.xticks([])
         plt.yticks([])
+
+    def copy(self):
+        return copy.deepcopy(self)

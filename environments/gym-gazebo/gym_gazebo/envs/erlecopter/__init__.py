@@ -1,1 +1,0 @@
-from gym_gazebo.envs.erlecopter.gazebo_erlecopter_hover import GazeboErleCopterHoverEnv
