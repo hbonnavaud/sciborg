@@ -352,6 +352,11 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
     def get_goal_from_observation(self, observation: np.ndarray) -> np.ndarray:
         return observation[:2]
 
+    def copy(self):
+        raise NotImplementedError("could be hard to manage many gazebo in parallel with similar topics on the same "
+                                  "network. For this reason, this environment cannot be copy until we find a "
+                                  "solution.")
+
 
 if __name__ == "__main__":
     env = SingleRobotEnvironment(map_name="medium_maze", use_lidar=True, use_odometry=True)
