@@ -2,11 +2,16 @@ import time
 from enum import Enum
 import random
 from multiprocessing import Process
+import matplotlib
+from matplotlib import pyplot as plt
+
 from environments.robotic_environment.launch_gazebo import launch_gazebo
 import numpy as np
 from gym.spaces import Box
 from std_srvs.srv import Empty
-from environments.robotic_environment.simulations_assets.build_world_from_map import generate_xml
+from environments.robotic_environment.simulations_assets.build_world_from_map import (generate_xml,
+                                                                                      coordinates_from_position,
+                                                                                      position_from_coordinates)
 from environments.goal_conditioned_environment import GoalConditionedEnvironment
 import rclpy
 from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy
@@ -14,7 +19,6 @@ from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped
 from rclpy.qos import QoSProfile
-
 
 class TileType(Enum):
     EMPTY = 0
@@ -171,19 +175,19 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             service_name = service[0]
             service_type = service[1][0]
             if service_type == "std_srvs/srv/Empty":
-                if not self.real_time and service_name.split("/")[-1].startswith("pause"):
+                if service_name.split("/")[-1].startswith("pause"):
                     self.pause_service_name = service_name
-                elif not self.real_time and service_name.split("/")[-1].startswith("unpause"):
+                elif service_name.split("/")[-1].startswith("unpause"):
                     self.unpause_service_name = service_name
                 if service_name.split("/")[-1] == "reset_world":
                     self.reset_service_name = service_name
 
-            if not self.real_time and not hasattr(self, "pause_service_name"):
-                raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service pause.")
-            if not self.real_time and not hasattr(self, "unpause_service_name"):
-                raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service unpause.")
-            if not hasattr(self, "reset_service_name"):
-                raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service reset_world.")
+        if not hasattr(self, "pause_service_name"):
+            raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service pause.")
+        if not hasattr(self, "unpause_service_name"):
+            raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service unpause.")
+        if not hasattr(self, "reset_service_name"):
+            raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service reset_world.")
 
         # Setup subscribers
         qos_sensor = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST,
@@ -200,6 +204,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.position_message_type = Odometry if self.use_odometry else PoseStamped
         self.position_subscriber = self.node.create_subscription(self.position_message_type, self.position_topic_name,
                                                                  self._position_callback, qos_profile=qos_sensor)
+        self.last_observation = None
 
         # Setup command publisher
         self.commands_publisher = self.node.create_publisher(Twist, self.commands_topic_name, QoSProfile(depth=10))
@@ -320,20 +325,16 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         reached = distance < self.goal_reachability_threshold
         malus = -1 if self.sparse_reward else - distance
         reward = 0 if reached else malus
-
+        self.last_observation = agent_observation
         return agent_observation, reward, reached, {"collided": collided, "reached": reached}
-
-    def map_coordinates_to_env_position(self, x, y):
-        x = self.maze_array.shape[1] + x if x < 0 else x
-        y = self.maze_array.shape[0] + y if y < 0 else y
-        return np.array([x - self.maze_array.shape[1] / 2 + 0.5, - (y - self.maze_array.shape[0] / 2 + 0.5)])
 
     def reset(self):
         self.reset_client.call_async(Empty.Request())
 
         # setup goal
         goal_tile = np.flip(random.choice(np.argwhere(self.maze_array != TileType.WALL.value)))
-        goal_position = self.map_coordinates_to_env_position(*goal_tile)
+        goal_position = position_from_coordinates(*goal_tile, self.environment_size_scale, self.maze_array)
+        goal_position = np.array(goal_position)
         self.goal = np.random.uniform(goal_position - 0.5, goal_position + 0.5)
 
         observation, collided = self.get_observation()
@@ -362,16 +363,97 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
     def get_goal_from_observation(self, observation: np.ndarray) -> np.ndarray:
         return observation[:2]
 
+    def pause_simulation(self):
+        self.pause_client.call_async(Empty.Request())
+
+    def unpause_simulation(self):
+        self.unpause_client.call_async(Empty.Request())
+
+    def render(self, resolution=6, ignore_goal=False) -> np.ndarray:
+        """
+        :params pixels_tiles_width: int, tiles width in pixel.
+        :params ignore_goal: bool, whether to draw goal on the image or not.
+        Return a np.ndarray of size (width, height, 3) of pixels that represent the environments and it's walls
+        :return: The final image.
+        """
+
+        # we add np.full(2, 2) to get image borders, because border walls are not included in env.maze_space.
+        # We assume walls have a width of one, but it's not really important for a generated image.
+
+        image_width_px, image_height_px = np.array(self.maze_array.shape) * resolution
+        image = np.full((image_height_px, image_width_px, 3), 255, dtype=np.uint8)
+
+        walls = np.argwhere(self.maze_array == TileType.WALL.value)
+
+        # Render the grid
+        for coordinates in np.argwhere(self.maze_array == TileType.WALL.value):
+            image[coordinates[0] * resolution:(coordinates[0] + 1) * resolution,
+                  coordinates[1] * resolution:(coordinates[1] + 1) * resolution, :] = TileType.WALL.value
+
+        def place_point(x, y, color=None, width=resolution / 2):
+            nonlocal image, resolution
+            if isinstance(width, float):
+                width = int(width)
+            if color is None:
+                color = [125, 125, 125]
+            if isinstance(color, list):
+                color = np.array(color)
+
+            center = coordinates_from_position(y, x, self.environment_size_scale, self.maze_array)
+            center = (np.array(center) * resolution).astype(int)
+            assert (center >= 0).all()
+
+            # Imagine a square of size width * width, with the coordinates computed above as a center. Iterate through
+            # each pixel inside this square to
+            radius = width
+            for i in range(center[0] - radius, center[0] + radius):
+                for j in range(center[1] - radius, center[1] + radius):
+                    dist = np.linalg.norm(np.array([i, j]) - center)
+                    if dist < radius and 0 <= i < image.shape[1] and 0 <= j < image.shape[0]:
+                        image[j, i] = color
+            return image
+
+        if not ignore_goal:
+            place_point(*self.goal, color=[255, 0, 0], width=resolution / 2)
+        if self.last_observation is None:
+            self.step(np.array([0, 0]))
+        place_point(*self.last_observation[:2], color=[0, 0, 255], width=resolution / 2)
+        return image
+
 
 if __name__ == "__main__":
 
-    map_name = RobotMapsIndex.HARD.value
-    env = SingleRobotEnvironment(map_name=map_name, use_lidar=True, use_odometry=True)
+    # map_name = RobotMapsIndex.HARD.value
+    # env = SingleRobotEnvironment(map_name=map_name, use_lidar=True, use_odometry=True)
+    #
+    # for episode_id in range(10):
+    #     print("Episode {}".format(episode_id))
+    #     env.reset()
+    #
+    #     for step_id in range(500):
+    #         print("Step {}".format(step_id))
+    #         env.step(env.action_space.sample())
+    matplotlib.use('Qt5Agg')
+    env = SingleRobotEnvironment(map_name=RobotMapsIndex.MEDIUM.value, use_lidar=True, use_odometry=True,
+                                 real_time=False)
 
-    for episode_id in range(10):
-        print("Episode {}".format(episode_id))
-        env.reset()
+    plt.ion()
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
 
-        for step_id in range(500):
-            print("Step {}".format(step_id))
-            env.step(env.action_space.sample())
+    env.reset()
+    env.pause_simulation()
+    print("waiting")
+    env.unpause_simulation()
+
+    env.reset()
+
+    for step_id in range(500):
+        print("Step {}".format(step_id))
+        env.step(np.array([1, 0]))
+        ax.cla()
+        ax.imshow(env.render())
+        fig.canvas.flush_events()
+
+
+

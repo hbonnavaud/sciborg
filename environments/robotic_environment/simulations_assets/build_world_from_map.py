@@ -60,9 +60,18 @@ def load_walls(maze_array):
 
 
 def position_from_coordinates(x, y, scale, maze_array):
+    """
+    returns the expected position inside the simulation from the coordinate of a tile in the maze_array
+    """
     width, height = np.array(maze_array).shape
-    return (((width - 1 - x) - width / 2 + 0.5) * scale,
-            ((height - 1 - y) - height / 2 + 0.5) * scale)
+    return ((width - 1 - x) - width / 2 + 0.5) * scale, ((height - 1 - y) - height / 2 + 0.5) * scale
+
+def coordinates_from_position(x_, y_, scale, maze_array):
+    """
+    returns the coordinate (as float) inside the maze_array from a position inside the simulation
+    """
+    width, height = np.array(maze_array).shape
+    return - width / 2 - 0.5 + width - x_ / scale, - height / 2 - 0.5 + height - y_ / scale
 
 
 def generate_xml(map_name: str, robot_name: str, scale: float = 1., walls_height: float = 1.) -> (dict, str):
