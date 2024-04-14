@@ -40,8 +40,10 @@ class ValueBasedAgent(Agent, ABC):
         source_low, source_high = source_action_box.low, source_action_box.high
         target_low, target_high = self.action_space.low, self.action_space.high
         if isinstance(actions, torch.Tensor):
-            source_low, source_high = torch.tensor(source_low), torch.tensor(source_high)
-            target_low, target_high = torch.tensor(target_low), torch.tensor(target_high)
+            source_low, source_high = (torch.tensor(source_low, device=self.device),
+                                       torch.tensor(source_high, device=self.device))
+            target_low, target_high = (torch.tensor(target_low, device=self.device),
+                                       torch.tensor(target_high, device=self.device))
 
         # Scale action to the action space
         source_range = source_high - source_low

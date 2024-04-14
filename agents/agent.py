@@ -99,18 +99,22 @@ class Agent(ABC):
         save_in_pickle = {}
         for k, v in self.__dict__.items():
             if isinstance(v, torch.nn.Module):
-                torch.save(v.observation_dict(), os.path.join(directory, k + ".pt"))
-            if isinstance(v, (int, str)):
+                torch.save(v.state_dict(), str(directory / (k + ".pt")))
+            elif isinstance(v, (int, str)):
                 # Store in a json file every variable that might be easy to read by a human, so we can easily access to
                 # some information without building a python script
                 save_in_json[k] = v
+            elif callable(v) and v.__name__ == "<lambda>":
+                pass  # We cannot save lambda expression
+            elif isinstance(v, Agent):
+                v.save(directory / k)  # Wrapped agent recursive save
             else:
                 # We consider the others attributes as too complex to be read by human (do you really want to take a
                 # look in a replay buffer without a script?) so we will store them in a binary file to save space
                 # and because some of them cannot be saved in a json file like numpy arrays.
                 save_in_pickle[k] = v
-        json.dump(save_in_json, open(os.path.join(directory, "basic_attributes.json"), "w"))
-        pickle.dump(save_in_pickle, open(os.path.join(directory, "objects_attributes.pk"), "wb"))
+        json.dump(save_in_json, open(str(directory / "basic_attributes.json"), "w"))
+        pickle.dump(save_in_pickle, open(str(directory / "objects_attributes.pk"), "wb"))
 
     def load(self, directory):
         if not os.path.isdir(directory):
@@ -118,7 +122,7 @@ class Agent(ABC):
 
         # Load attributes in basic_variables.json
         try:
-            saved_in_json = json.load(open(os.path.join(directory, "basic_attributes.json"), "r"))
+            saved_in_json = json.load(open(str(directory / "basic_attributes.json"), "r"))
             for k, v in saved_in_json.items():
                 self.__setattr__(k, v)
         except FileNotFoundError:
@@ -126,16 +130,21 @@ class Agent(ABC):
 
         # Load attributes in objects_attributes.pk
         try:
-            saved_in_pickle = pickle.load(open(os.path.join(directory, "objects_attributes.pk"), "rb"))
+            saved_in_pickle = pickle.load(open(str(directory / "objects_attributes.pk"), "rb"))
             for k, v in saved_in_pickle.items():
                 self.__setattr__(k, v)
         except FileNotFoundError:
             pass
 
+        # Load wrapped agents
+        for k, v in self.__dict__.items():
+            if isinstance(v, Agent):
+                self.__setattr__(k, v.load(directory / k))
+
         # Load the rest
         for k, v in self.__dict__.items():
             if isinstance(v, torch.nn.Module):
-                self.__getattribute__(k).load_observation_dict(torch.load(os.path.join(directory, k + ".pt")))
+                self.__getattribute__(k).load_state_dict(torch.load(str(directory / k + ".pt")))
 
     @abstractmethod
     def action(self, observation, explore=True):

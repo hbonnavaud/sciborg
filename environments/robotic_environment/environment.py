@@ -249,30 +249,13 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                 rclpy.spin_once(self.node)
                 time.sleep(0.1)
 
-    def step(self, action):
-
-        #### PERFORM ACTION ####
-
-        # Publish the robot action
-        action = np.clip(action, self.action_space.low, self.action_space.high)
-        self.velocity = np.clip(self.velocity + action, - self.max_velocity, self.max_velocity)
-        vel_cmd = Twist()
-        vel_cmd.linear.x = self.velocity[0].item()
-        vel_cmd.angular.z = self.velocity[1].item()
-        self.commands_publisher.publish(vel_cmd)
-
-        # Unpause the simulation
-        if not self.real_time:
-            self.unpause_client.call_async(Empty.Request())
-            time.sleep(self.simulation_step_duration)
-            self.pause_client.call_async(Empty.Request())
+    def get_observation(self):
 
         #### GET STATE ####
-
         self.waiting_for_position = True
         self.waiting_for_lidar = True
         while self.waiting_for_position and self.waiting_for_lidar:
-            rclpy.spin_once(env.node)
+            rclpy.spin_once(self.node)
 
         agent_observation = np.array([
             self.last_position_message.pose.pose.position.x,
@@ -310,13 +293,35 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                 beams.append(ranges[beam_width * i + beam_width // 2])
             agent_observation = np.concatenate((agent_observation, np.array(beams)))
 
+        return agent_observation, collided
+
+    def step(self, action):
+
+        #### PERFORM ACTION ####
+
+        # Publish the robot action
+        action = np.clip(action, self.action_space.low, self.action_space.high)
+        self.velocity = np.clip(self.velocity + action, - self.max_velocity, self.max_velocity)
+        vel_cmd = Twist()
+        vel_cmd.linear.x = self.velocity[0].item()
+        vel_cmd.angular.z = self.velocity[1].item()
+        self.commands_publisher.publish(vel_cmd)
+
+        # Unpause the simulation
+        if not self.real_time:
+            self.unpause_client.call_async(Empty.Request())
+            time.sleep(self.simulation_step_duration)
+            self.pause_client.call_async(Empty.Request())
+
+        agent_observation, collided = self.get_observation()
+
         # Compute distance to the goal, and compute reward from it
         distance = np.linalg.norm(agent_observation[:2] - self.goal)
         reached = distance < self.goal_reachability_threshold
         malus = -1 if self.sparse_reward else - distance
         reward = 0 if reached else malus
 
-        return agent_observation, reward, reached, {"collided": collided}
+        return agent_observation, reward, reached, {"collided": collided, "reached": reached}
 
     def map_coordinates_to_env_position(self, x, y):
         x = self.maze_array.shape[1] + x if x < 0 else x
@@ -331,7 +336,12 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         goal_position = self.map_coordinates_to_env_position(*goal_tile)
         self.goal = np.random.uniform(goal_position - 0.5, goal_position + 0.5)
 
-        pass
+        observation, collided = self.get_observation()
+        assert not collided, ("Agent spawned on a wall, there should be an issue somewhere. Verify collision detection "
+                              "function, and verify where the agent spawn in the env (enable client mode with "
+                              "headless=False)")
+
+        return observation, self.goal
 
     ##########################################################################
     ####                       SUBSCRIBERS CALLBACKS                      ####
@@ -352,14 +362,11 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
     def get_goal_from_observation(self, observation: np.ndarray) -> np.ndarray:
         return observation[:2]
 
-    def copy(self):
-        raise NotImplementedError("could be hard to manage many gazebo in parallel with similar topics on the same "
-                                  "network. For this reason, this environment cannot be copy until we find a "
-                                  "solution.")
-
 
 if __name__ == "__main__":
-    env = SingleRobotEnvironment(map_name="medium_maze", use_lidar=True, use_odometry=True)
+
+    map_name = RobotMapsIndex.HARD.value
+    env = SingleRobotEnvironment(map_name=map_name, use_lidar=True, use_odometry=True)
 
     for episode_id in range(10):
         print("Episode {}".format(episode_id))

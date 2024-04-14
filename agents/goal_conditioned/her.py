@@ -38,7 +38,7 @@ class HER(GoalConditionedWrapper):
     def start_episode(self, *information, test_episode=False):
         observation, goal = information
         self.last_trajectory = []
-        return super().start_episode(observation, goal, test_episode)
+        return super().start_episode(observation, goal, test_episode=test_episode)
 
     def process_interaction(self, action, new_observation, reward, done, learn=True):
         if learn and not self.under_test:
@@ -59,7 +59,7 @@ class HER(GoalConditionedWrapper):
             for relabelling_id in range(self.nb_resample_per_observations):
                 goal_index = randrange(new_observation_index, len(self.last_trajectory))
                 target_observation, _ = self.last_trajectory[goal_index]
-                goal = self.get_goal_from_observation(target_observation)
+                goal = self.goal_from_observation_fun(target_observation)
 
                 features = self.get_features(observation, goal)
                 # Compute a reward that goes from -1, for the first observation of the fake trajectory, to 0, if the

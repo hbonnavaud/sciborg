@@ -1,12 +1,14 @@
 # Goal conditioned agent
 from typing import Union
-
+import json
+import pickle
+import os
 import numpy as np
 from gym.spaces import Box, Discrete
 import torch
-
 from agents.goal_conditioned.goal_conditioned_agent import GoalConditionedAgent
 from agents.value_based_agents.value_based_agent import ValueBasedAgent
+from utils import create_dir
 
 
 class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
@@ -101,7 +103,8 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         observation, goal = information
         super().start_episode(observation, test_episode)
         self.current_goal = goal
-        self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_goal), test_episode)
+        self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_goal),
+                                                        test_episode=test_episode)
 
     def action(self, observation, explore=True):
         return self.reinforcement_learning_agent.action(self.get_features(observation, self.current_goal), explore)
@@ -130,4 +133,5 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         return estimated_distance
 
     def set_device(self, device):
+        super().set_device(device)
         self.reinforcement_learning_agent.set_device(device)
