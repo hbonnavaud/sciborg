@@ -7,7 +7,7 @@
               <size>2 1 0.5</size>
             </box>
           </geometry>
-          <pose>0 0 0.15 0 -0 0</pose>
+          <pose>0 0 0 0 -0 0</pose>
           <max_contacts>10</max_contacts>
           <surface>
             <contact>
@@ -23,7 +23,7 @@
           </surface>
         </collision>
         <visual name='wall_Visual'>
-          <pose>0 0 0.15 0 -0 0</pose>
+          <pose>0 0 0 0 -0 0</pose>
           <geometry>
             <box>
               <size>2 1 0.5</size>
@@ -40,7 +40,7 @@
             <layer>0</layer>
           </meta>
         </visual>
-        <pose>-0.425 -0.000314 0 0 -0 1.5708</pose>
+        <pose>0 0 0 0 0 0</pose>
         <self_collide>0</self_collide>
         <enable_wind>0</enable_wind>
         <kinematic>0</kinematic>

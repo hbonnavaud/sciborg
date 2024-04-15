@@ -1,5 +1,6 @@
 <sdf version='1.7'>
   <world name='default'>
+    <plugin name="gazebo_ros_state" filename="libgazebo_ros_state.so"></plugin>
     <gui fullscreen='0'>
       <camera name='user_camera'>
         <pose>-10.9542 -0.974503 6.44162 -0 0.637796 0.06397</pose>
@@ -124,5 +125,9 @@
         <pose>0 0 3 0 -0 0</pose>
       </light>
     </state>
+
+    <!-- Here we will add objects (walls, robot(s), and spheres -->
+
   </world>
+
 </sdf>

@@ -35,8 +35,8 @@ def place_point(image: np.ndarray, position: np.ndarray, color: Union[np.ndarray
     return image
 
 
-def place_line(image: np.ndarray, start: np.ndarray, stop: np.ndarray,
-               color: np.ndarray = np.zeros(3)):
+def place_line(image: np.ndarray, start: Union[list, np.ndarray], stop: Union[list, np.ndarray],
+               color: Union[list, np.ndarray] = np.zeros(3)):
 
     """
     Modify the input image

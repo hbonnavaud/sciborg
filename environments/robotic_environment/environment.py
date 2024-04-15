@@ -4,21 +4,27 @@ import random
 from multiprocessing import Process
 import matplotlib
 from matplotlib import pyplot as plt
+import math
+
+from skimage.draw import line_aa
 
 from environments.robotic_environment.launch_gazebo import launch_gazebo
 import numpy as np
 from gym.spaces import Box
 from std_srvs.srv import Empty
 from environments.robotic_environment.simulations_assets.build_world_from_map import (generate_xml,
-                                                                                      coordinates_from_position,
-                                                                                      position_from_coordinates)
+                                                                                      simulation_pos_to_maze_pos,
+                                                                                      maze_pos_to_simulation_pos)
 from environments.goal_conditioned_environment import GoalConditionedEnvironment
 import rclpy
 from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import Twist, PoseStamped, Pose, Point
+from gazebo_msgs.srv import SetEntityState
 from rclpy.qos import QoSProfile
+from utils import get_euler_from_quaternion, place_line
+
 
 class TileType(Enum):
     EMPTY = 0
@@ -47,6 +53,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                  robot_name: str = RobotsIndex.IROBOT.value,
                  environment_size_scale: float = 0.5,
                  headless: bool = False,
+                 nb_markers: int = 0,
 
                  # Environment behaviour settings
                  real_time: bool = True,
@@ -56,7 +63,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                  reward_at_collision: float = None,  # Set the reward given at collision.
                  reward_once_reached: float = 0,
                  sparse_reward: bool = True,
-
                  max_velocity: np.ndarray = np.array([0.5, 1]),
                  max_action: np.ndarray = np.array([0.2, 0.4]),
 
@@ -64,7 +70,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                  use_lidar: bool = False,
                  lidar_max_angle: float = None,  # USELESS if variable use_lidar is false
                  nb_lidar_beams: int = 20,  # USELESS if variable use_lidar is false
-                 use_odometry: bool = False,  # Use odometry topic as position/orientation (instead of /pose by default)
+                 use_odometry: bool = False  # Use odometry topic as position/orientation (instead of /pose by default)
                  ):
 
         """
@@ -75,6 +81,8 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             maps/worlds/building_assets/robots/{robot_name}.xml
         :params environment_size_scale: float, size of an element of the map_array, in the gazebo .world file.
         :params headless: bool, whether to launch the gazebo client or not
+        :params nb_markers: int, default=0, how many marker should be added in the .world file. Markers are static
+            sphere models without collision, used to mark a position like a goal or an RRT graph node for example.
 
         # Environment behaviour settings
         :params real_time: bool, whether to pause the simulation, and play it for a fixed duration at each step, or let
@@ -108,6 +116,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             "How do you want to reach a goal that is next to a wall?"
 
         self.environment_size_scale = environment_size_scale
+        self.nb_markers = nb_markers
         self.real_time = real_time
         self.simulation_step_duration = simulation_step_duration
         self.goal_reachability_threshold = goal_reachability_threshold
@@ -124,10 +133,14 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.node = rclpy.create_node('robotic_environment')
 
         # Build .world file from the given map
-        self.maze_array, world_file_path = generate_xml(map_name, robot_name, scale=self.environment_size_scale)
+        self.maze_array, world_file_path = generate_xml(map_name, robot_name, scale=self.environment_size_scale,
+                                                        nb_markers=self.nb_markers)
 
         # Launch gazebo using the launch file and the robot
-        p = Process(target=launch_gazebo, args=(str(world_file_path), headless,))  # TODO add robot sdf file, maybe later
+        p = Process(target=launch_gazebo, args=(str(world_file_path), headless,))
+        # TODO add robot sdf file, maybe later
+        #  NB1: gave it a try, took me four hours without success. Good luck.
+        #  There might be a trick I don't know though.
         p.start()
 
         # At this time, gazebo is launching. We wait until we can find the mandatory reset_world service (which means
@@ -142,9 +155,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             for service in self.node.get_service_names_and_types():
                 if service[0].split("/")[-1] == "reset_world":
                     reset_service_found = True
-                    self.reset_service_name = service[0]
                     assert service[1][0] == "std_srvs/srv/Empty", "Wrong type for reset service."
-                    print("Found gazebo service {}".format(service[0]))
                     break
             time.sleep(0.5)
 
@@ -171,22 +182,25 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             raise EnvironmentError("No topic found with type '" + commands_message_type + "' alone for commands.")
 
         # Find required service names
+
         for service in self.node.get_service_names_and_types():
             service_name = service[0]
             service_type = service[1][0]
             if service_type == "std_srvs/srv/Empty":
                 if service_name.split("/")[-1].startswith("pause"):
-                    self.pause_service_name = service_name
+                    self.pause_client = self.node.create_client(Empty, service_name)
                 elif service_name.split("/")[-1].startswith("unpause"):
-                    self.unpause_service_name = service_name
+                    self.unpause_client = self.node.create_client(Empty, service_name)
                 if service_name.split("/")[-1] == "reset_world":
-                    self.reset_service_name = service_name
+                    self.reset_client = self.node.create_client(Empty, service_name)
+            elif service_name.endswith("set_entity_state"):
+                self.set_entity_state_client = self.node.create_client(SetEntityState, service_name)
 
-        if not hasattr(self, "pause_service_name"):
+        if not hasattr(self, "pause_client"):
             raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service pause.")
-        if not hasattr(self, "unpause_service_name"):
+        if not hasattr(self, "unpause_client"):
             raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service unpause.")
-        if not hasattr(self, "reset_service_name"):
+        if not hasattr(self, "reset_client"):
             raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service reset_world.")
 
         # Setup subscribers
@@ -209,12 +223,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         # Setup command publisher
         self.commands_publisher = self.node.create_publisher(Twist, self.commands_topic_name, QoSProfile(depth=10))
 
-        # Setup services clients
-        if not self.real_time:
-            self.unpause_client = self.node.create_client(Empty, self.unpause_service_name)
-            self.pause_client = self.node.create_client(Empty, self.pause_service_name)
-        self.reset_client = self.node.create_client(Empty, self.reset_service_name)
-
         # Setup spaces
 
         """
@@ -229,9 +237,15 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         self.observation_size = 9
         if self.use_lidar:
             self.observation_size += self.nb_lidar_beams
-        high = np.full(self.observation_size, float("inf"), dtype=np.float16)
+
+        xy_high = np.array(self.maze_array.shape) - 0.5
+        xy_high = np.array(maze_pos_to_simulation_pos(*xy_high, self.environment_size_scale, self.maze_array))
+        others_high = np.full(self.observation_size - 2, float("inf"), dtype=np.float16)
+        high = np.concatenate((xy_high, others_high))
         self.observation_space = Box(-high, high, dtype=np.float16)
-        self.goal_space = Box(- high[:2], high[:2], dtype=np.float16)
+        self.goal_space = Box(-xy_high, xy_high, dtype=np.float16)
+        # \-> WARNING Sample in the goal space do not guarantee that the sampled goal will not be inside a wall.
+        #             Check the method in self.reset function.
         self.goal = np.zeros(self.goal_space.shape)
 
         self.waiting_for_position = False
@@ -275,7 +289,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         ])
 
         # read laser state
-        collided = False
         if self.use_lidar:
             assert self.last_lidar_message
             if self.lidar_max_angle is not None:
@@ -298,6 +311,8 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                 beams.append(ranges[beam_width * i + beam_width // 2])
             agent_observation = np.concatenate((agent_observation, np.array(beams)))
 
+        # Detect collision
+        collided = np.array(self.last_lidar_message.ranges).min() < self.collision_distance_threshold
         return agent_observation, collided
 
     def step(self, action):
@@ -305,12 +320,13 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         #### PERFORM ACTION ####
 
         # Publish the robot action
-        action = np.clip(action, self.action_space.low, self.action_space.high)
-        self.velocity = np.clip(self.velocity + action, - self.max_velocity, self.max_velocity)
-        vel_cmd = Twist()
-        vel_cmd.linear.x = self.velocity[0].item()
-        vel_cmd.angular.z = self.velocity[1].item()
-        self.commands_publisher.publish(vel_cmd)
+        if action is not None:  # Handy if you want to control the robot with a telehop script in parallel
+            action = np.clip(action, self.action_space.low, self.action_space.high)
+            self.velocity = np.clip(self.velocity + action, - self.max_velocity, self.max_velocity)
+            vel_cmd = Twist()
+            vel_cmd.linear.x = self.velocity[0].item()
+            vel_cmd.angular.z = self.velocity[1].item()
+            self.commands_publisher.publish(vel_cmd)
 
         # Unpause the simulation
         if not self.real_time:
@@ -318,24 +334,33 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             time.sleep(self.simulation_step_duration)
             self.pause_client.call_async(Empty.Request())
 
-        agent_observation, collided = self.get_observation()
+        observation, collided = self.get_observation()
 
         # Compute distance to the goal, and compute reward from it
-        distance = np.linalg.norm(agent_observation[:2] - self.goal)
+        distance = np.linalg.norm(observation[:2] - self.goal)
         reached = distance < self.goal_reachability_threshold
         malus = -1 if self.sparse_reward else - distance
         reward = 0 if reached else malus
-        self.last_observation = agent_observation
-        return agent_observation, reward, reached, {"collided": collided, "reached": reached}
+        self.last_observation = observation
+        return observation, reward, reached, {"collided": collided, "reached": reached}
 
     def reset(self):
         self.reset_client.call_async(Empty.Request())
 
-        # setup goal
-        goal_tile = np.flip(random.choice(np.argwhere(self.maze_array != TileType.WALL.value)))
-        goal_position = position_from_coordinates(*goal_tile, self.environment_size_scale, self.maze_array)
+        # Sample a goal position from reachable tiles
+        goal_tile = random.choice(np.argwhere(self.maze_array != TileType.WALL.value))
+        goal_position = maze_pos_to_simulation_pos(*goal_tile, self.environment_size_scale, self.maze_array)
         goal_position = np.array(goal_position)
-        self.goal = np.random.uniform(goal_position - 0.5, goal_position + 0.5)
+        self.goal = np.random.uniform(goal_position - self.environment_size_scale / 2,
+                                      goal_position + self.environment_size_scale / 2)
+        # self.environment_size_scale / 2 aka: half the size of a maze_array tile.
+        # In other words, we sample a goal uniformly inside the tile we sampled.
+
+        # Move the goal marker to the goal position, so we can see the goal in the gazebo simulation:
+        request = SetEntityState.Request()
+        request.state.name = "goal_marker"
+        request.state.pose = Pose(position=Point(x=self.goal[0], y=self.goal[1], z=0.2))
+        self.set_entity_state_client.call_async(request)
 
         observation, collided = self.get_observation()
         assert not collided, ("Agent spawned on a wall, there should be an issue somewhere. Verify collision detection "
@@ -369,7 +394,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
     def unpause_simulation(self):
         self.unpause_client.call_async(Empty.Request())
 
-    def render(self, resolution=6, ignore_goal=False) -> np.ndarray:
+    def render(self, resolution=10, ignore_goal=False) -> np.ndarray:
         """
         :params pixels_tiles_width: int, tiles width in pixel.
         :params ignore_goal: bool, whether to draw goal on the image or not.
@@ -379,6 +404,8 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
         # we add np.full(2, 2) to get image borders, because border walls are not included in env.maze_space.
         # We assume walls have a width of one, but it's not really important for a generated image.
+
+        self.pause_simulation()
 
         image_width_px, image_height_px = np.array(self.maze_array.shape) * resolution
         image = np.full((image_height_px, image_width_px, 3), 255, dtype=np.uint8)
@@ -399,7 +426,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             if isinstance(color, list):
                 color = np.array(color)
 
-            center = coordinates_from_position(y, x, self.environment_size_scale, self.maze_array)
+            center = simulation_pos_to_maze_pos(x, y, self.environment_size_scale, self.maze_array) + np.full(2, 0.5)
             center = (np.array(center) * resolution).astype(int)
             assert (center >= 0).all()
 
@@ -410,31 +437,37 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                 for j in range(center[1] - radius, center[1] + radius):
                     dist = np.linalg.norm(np.array([i, j]) - center)
                     if dist < radius and 0 <= i < image.shape[1] and 0 <= j < image.shape[0]:
-                        image[j, i] = color
+                        image[i, j] = color
             return image
 
         if not ignore_goal:
             place_point(*self.goal, color=[255, 0, 0], width=resolution / 2)
+
+        # Place orientation
+        agent_color = [0, 0, 255]
+        orientation = get_euler_from_quaternion(*self.last_observation[3:7])
+        position_1 = np.array(simulation_pos_to_maze_pos(*self.last_observation[:2], self.environment_size_scale,
+                                                         self.maze_array)) + np.full(2, 0.5)
+        position_2 = position_1 + np.array([math.cos(orientation[0]), - math.sin(orientation[0])])
+        start_center_pixel_x, start_center_pixel_y = (position_1 * resolution).astype(int)
+        stop_center_pixel_x, stop_center_pixel_y = (position_2 * resolution).astype(int)
+        rr, cc, val = line_aa(start_center_pixel_x, start_center_pixel_y, stop_center_pixel_x, stop_center_pixel_y)
+        old = image[rr, cc]
+        extended_val = np.tile(val, (3, 1)).T
+        image[rr, cc] = (1 - extended_val) * old + extended_val * agent_color
+
         if self.last_observation is None:
             self.step(np.array([0, 0]))
-        place_point(*self.last_observation[:2], color=[0, 0, 255], width=resolution / 2)
+        place_point(*self.last_observation[:2], color=agent_color, width=resolution / 2)
+
+        self.unpause_simulation()
+
         return image
 
 
 if __name__ == "__main__":
-
-    # map_name = RobotMapsIndex.HARD.value
-    # env = SingleRobotEnvironment(map_name=map_name, use_lidar=True, use_odometry=True)
-    #
-    # for episode_id in range(10):
-    #     print("Episode {}".format(episode_id))
-    #     env.reset()
-    #
-    #     for step_id in range(500):
-    #         print("Step {}".format(step_id))
-    #         env.step(env.action_space.sample())
     matplotlib.use('Qt5Agg')
-    env = SingleRobotEnvironment(map_name=RobotMapsIndex.MEDIUM.value, use_lidar=True, use_odometry=True,
+    env = SingleRobotEnvironment(map_name=RobotMapsIndex.EMPTY.value, use_lidar=True, use_odometry=True,
                                  real_time=False)
 
     plt.ion()
@@ -445,15 +478,20 @@ if __name__ == "__main__":
     env.pause_simulation()
     print("waiting")
     env.unpause_simulation()
-
     env.reset()
 
-    for step_id in range(500):
+    for step_id in range(5000):
         print("Step {}".format(step_id))
-        env.step(np.array([1, 0]))
+        agent_observation, reward_, done_, info_ = env.step(None)
+        collided_ = info_["collided"]
+        reached_ = info_["reached"]
+        img = env.render()
         ax.cla()
-        ax.imshow(env.render())
+        ax.imshow(img)
         fig.canvas.flush_events()
+        if reached_ or done_:
+            print("\n\n GOAL REACHED \n\n")
+            break
 
 
 
