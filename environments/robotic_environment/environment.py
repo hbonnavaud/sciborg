@@ -160,29 +160,37 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             time.sleep(0.5)
 
         # Look for topics
+        qos_sensor = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST,
+                                depth=1)
         lidar_message_type = "sensor_msgs/msg/LaserScan"
         position_message_type = "nav_msgs/msg/Odometry" if self.use_odometry else "geometry_msgs/msg/PoseStamped"
         commands_message_type = "geometry_msgs/msg/Twist"
+        self.last_lidar_message = None
+        self.last_position_message = None
+        self.last_observation = None
         for topic in self.node.get_topic_names_and_types():
             topic_name = topic[0]
             topic_type = topic[1][0]
-            if self.use_lidar and lidar_message_type == topic_type:
-                self.lidar_topic_name = topic_name
+            if lidar_message_type == topic_type:
+                self.lidar_subscriber = self.node.create_subscription(LaserScan, topic_name, self._lidar_callback,
+                                                                      qos_profile=qos_sensor)
             elif position_message_type == topic_type:
-                self.position_topic_name = topic_name
+                self.position_message_type = Odometry if self.use_odometry else PoseStamped
+                self.position_subscriber = self.node.create_subscription(self.position_message_type, topic_name,
+                                                                         self._position_callback,
+                                                                         qos_profile=qos_sensor)
             elif commands_message_type == topic_type:
-                self.commands_topic_name = topic_name
+                self.commands_publisher = self.node.create_publisher(Twist, topic_name, QoSProfile(depth=10))
 
         # Find missing topics
-        if self.use_lidar and not hasattr(self, "lidar_topic_name"):
+        if not hasattr(self, "lidar_subscriber"):
             raise EnvironmentError("No topic found with type '" + lidar_message_type + "' alone for lidar.")
-        if not hasattr(self, "position_topic_name"):  # MANDATORY
+        if not hasattr(self, "position_subscriber"):  # MANDATORY
             raise EnvironmentError("No topic found with type '" + position_message_type + "' alone for position.")
-        if not hasattr(self, "commands_topic_name"):  # MANDATORY
+        if not hasattr(self, "commands_publisher"):  # MANDATORY
             raise EnvironmentError("No topic found with type '" + commands_message_type + "' alone for commands.")
 
         # Find required service names
-
         for service in self.node.get_service_names_and_types():
             service_name = service[0]
             service_type = service[1][0]
@@ -203,26 +211,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         if not hasattr(self, "reset_client"):
             raise EnvironmentError("No service found with type 'std_srvs/srv/Empty' alone for service reset_world.")
 
-        # Setup subscribers
-        qos_sensor = QoSProfile(reliability=QoSReliabilityPolicy.BEST_EFFORT, history=QoSHistoryPolicy.KEEP_LAST,
-                                depth=1)
-
-        # - Setup lidar subscriber
-        if self.use_lidar:
-            self.last_lidar_message = None
-            self.lidar_subscriber = self.node.create_subscription(LaserScan, self.lidar_topic_name,
-                                                                  self._lidar_callback, qos_profile=qos_sensor)
-
-        # - Setup position subscriber
-        self.last_position_message = None
-        self.position_message_type = Odometry if self.use_odometry else PoseStamped
-        self.position_subscriber = self.node.create_subscription(self.position_message_type, self.position_topic_name,
-                                                                 self._position_callback, qos_profile=qos_sensor)
-        self.last_observation = None
-
-        # Setup command publisher
-        self.commands_publisher = self.node.create_publisher(Twist, self.commands_topic_name, QoSProfile(depth=10))
-
         # Setup spaces
 
         """
@@ -238,7 +226,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         if self.use_lidar:
             self.observation_size += self.nb_lidar_beams
 
-        xy_high = np.array(self.maze_array.shape) - 0.5
+        xy_high = np.full(2, - 0.5)
         xy_high = np.array(maze_pos_to_simulation_pos(*xy_high, self.environment_size_scale, self.maze_array))
         others_high = np.full(self.observation_size - 2, float("inf"), dtype=np.float16)
         high = np.concatenate((xy_high, others_high))
@@ -262,7 +250,8 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
                 rclpy.spin_once(self.node)
                 time.sleep(0.1)
 
-        if self.use_lidar and self.last_lidar_message is None:
+        if self.last_lidar_message is None:
+            # \-> Even if self.use_lidar is false, because we will use lidar to detect collisions
             print("Waiting for lidar topic ...")
             while self.last_lidar_message is None:
                 rclpy.spin_once(self.node)
@@ -409,8 +398,6 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
         image_width_px, image_height_px = np.array(self.maze_array.shape) * resolution
         image = np.full((image_height_px, image_width_px, 3), 255, dtype=np.uint8)
-
-        walls = np.argwhere(self.maze_array == TileType.WALL.value)
 
         # Render the grid
         for coordinates in np.argwhere(self.maze_array == TileType.WALL.value):
