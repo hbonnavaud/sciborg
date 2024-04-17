@@ -23,7 +23,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Pose, Point
 from gazebo_msgs.srv import SetEntityState
 from rclpy.qos import QoSProfile
-from utils import get_euler_from_quaternion, place_line
+from utils import quaternion_to_euler, place_line
 
 
 class TileType(Enum):
@@ -216,7 +216,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
         """
         Observation:
         o[0:3]: x, y, z, position
-        o[3:7]: quaternion orientation
+        o[3:7]: x, y, z, w, quaternion orientation
         o[7]: linear velocity
         o[8]: angular velocity
         o[9:]: lidar beams for the next n values if use_lidar is true, where n is self.nb_lidar_beams.
@@ -269,10 +269,10 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
             self.last_position_message.pose.pose.position.x,
             self.last_position_message.pose.pose.position.y,
             self.last_position_message.pose.pose.position.z,
-            self.last_position_message.pose.pose.orientation.w,
             self.last_position_message.pose.pose.orientation.x,
             self.last_position_message.pose.pose.orientation.y,
             self.last_position_message.pose.pose.orientation.z,
+            self.last_position_message.pose.pose.orientation.w,
             self.velocity[0].item(),
             self.velocity[1].item()
         ])
@@ -432,7 +432,7 @@ class SingleRobotEnvironment(GoalConditionedEnvironment):
 
         # Place orientation
         agent_color = [0, 0, 255]
-        orientation = get_euler_from_quaternion(*self.last_observation[3:7])
+        orientation = quaternion_to_euler(self.last_observation[3:7])  #TODO verify orientation position
         position_1 = np.array(simulation_pos_to_maze_pos(*self.last_observation[:2], self.environment_size_scale,
                                                          self.maze_array)) + np.full(2, 0.5)
         position_2 = position_1 + np.array([math.cos(orientation[0]), - math.sin(orientation[0])])
