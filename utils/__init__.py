@@ -9,8 +9,12 @@ except Exception as e:
 
 from .sys_fun import create_dir, empty_dir, save_image, generate_video
 from .stopwatch import Stopwatch
-from .general import (get_euler_from_quaternion, get_quaternion_from_euler, get_dict_as_str,
-                      get_point_image_after_rotation, print_replace_above)
+from .general import (euler_to_quaternion,
+                      quaternion_to_euler,
+                      are_euler_angles_equivalent,
+                      get_dict_as_str,
+                      get_point_image_after_rotation,
+                      print_replace_above)
 from .progress_bar import ProgressBar, Loader
 from .drawing import *
 from .spaces import *

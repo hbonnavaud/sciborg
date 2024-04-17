@@ -1,7 +1,7 @@
 import time
-
 import numpy as np
 from enum import Enum
+from scipy.spatial.transform import Rotation
 
 
 def get_dict_as_str(input_dict, start_tab="", tab="    "):
@@ -28,40 +28,19 @@ def get_dict_as_str(input_dict, start_tab="", tab="    "):
     return start_tab + "{\n" + result + "\n" + start_tab + "}"
 
 
-def get_quaternion_from_euler(roll, pitch, yaw) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
-    """
-    Convert an Euler angle to a quaternion.
-
-    Input
-      :param roll: The roll (rotation around x-axis) angle in radians.
-      :param pitch: The pitch (rotation around y-axis) angle in radians.
-      :param yaw: The yaw (rotation around z-axis) angle in radians.
-
-    Output
-      :return qx, qy, qz, qw: The orientation in quaternion [x,y,z,w] format
-    """
-    qx = np.sin(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) - np.cos(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
-    qy = np.cos(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2)
-    qz = np.cos(roll / 2) * np.cos(pitch / 2) * np.sin(yaw / 2) - np.sin(roll / 2) * np.sin(pitch / 2) * np.cos(yaw / 2)
-    qw = np.cos(roll / 2) * np.cos(pitch / 2) * np.cos(yaw / 2) + np.sin(roll / 2) * np.sin(pitch / 2) * np.sin(yaw / 2)
-
-    return qx, qy, qz, qw
+def euler_to_quaternion(euler_angle):
+    return Rotation.from_euler("xyz", euler_angle).as_quat()
 
 
-def get_euler_from_quaternion(x, y, z, w):
-    t0 = 2.0 * (w * x + y * z)
-    t1 = 1.0 - 2.0 * (x * x + y * y)
-    euler_x = np.arctan2(t0, t1)
+def quaternion_to_euler(quaternion):
+    return Rotation.from_quat(quaternion).as_euler('xyz')
 
-    t2 = 2. * (w * y - z * x)
-    t2 = np.clip(t2, -1, 1)
-    euler_y = np.arcsin(t2)
 
-    t3 = 2. * (w * z + x * y)
-    t4 = 1. - 2. * (y * y + z * z)
-    euler_z = np.arctan2(t3, t4)
-
-    return euler_x, euler_y, euler_z
+def are_euler_angles_equivalent(euler_angle_1, euler_angle_2, tolerance=np.deg2rad(1)):
+    dot_product = np.dot(euler_to_quaternion(euler_angle_1),
+                         euler_to_quaternion(euler_angle_2))
+    angle_diff = 2 * np.arccos(np.abs(dot_product))
+    return angle_diff <= tolerance
 
 
 def get_point_image_after_rotation(x, y, angle, rotation_center_x=0., rotation_center_y=0.):
@@ -90,11 +69,44 @@ def print_replace_above(n_lines_above, message):
 
 
 if __name__ == "__main__":
-    messages = ["A", "B", "C", "D"]
-    for m in messages:
-        print(m)
 
-    for num in range(20):
-        for i, m in enumerate(messages):
-            print_replace_above(4 - i, m + str(num))
-        time.sleep(.3)
+    def angles_conversion_tests():
+        angles = np.array([
+            [0, 0, 0],
+            [np.pi / 4, np.pi / 6, np.pi / 3],
+            [np.pi / 2, np.pi / 4, np.pi / 2],
+            [np.pi, np.pi / 3, np.pi / 6],
+            [3 * np.pi / 4, np.pi / 2, np.pi],
+            [np.pi / 6, np.pi / 2, np.pi / 4],
+            [np.pi / 3, np.pi / 6, 3 * np.pi / 4],
+            [np.pi / 2, 0, np.pi],
+            [0, np.pi / 2, np.pi],
+            [np.pi / 4, np.pi / 4, np.pi / 4]
+        ])
+
+        angles_as_quat = euler_to_quaternion(angles)
+        angles_as_euler = quaternion_to_euler(angles_as_quat)
+        for i in range(len(angles)):
+            angle = np.around(angles[i], 2)
+            angle_as_quat = np.around(angles_as_quat[i], 2)
+            angle_as_euler = np.around(angles_as_euler[i], 2)
+            t1 = "Initial: " + str(angle)
+            t2 = "quat: " + str(angle_as_quat)
+            t3 = "euler: " + str(angle_as_euler)
+            equals = (angle == angle_as_euler).all() or are_euler_angles_equivalent(angle, angle_as_euler)
+            t4 = "equal: " + str(equals)
+            t2 = t1 + " " * max(0, 30 - len(t1)) + t2
+            t3 = t2 + " " * max(0, 65 - len(t2)) + t3
+            t4 = t3 + " " * max(0, 90 - len(t3)) + t4
+            print(t4)
+
+
+    def print_replace_above_test():
+        messages = ["A", "B", "C", "D"]
+        for m in messages:
+            print(m)
+
+        for num in range(20):
+            for i, m in enumerate(messages):
+                print_replace_above(4 - i, m + str(num))
+            time.sleep(.3)
