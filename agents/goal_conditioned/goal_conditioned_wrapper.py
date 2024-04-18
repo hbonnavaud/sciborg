@@ -27,7 +27,6 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
                  goal_space=None,
                  goal_from_observation_fun=None,
                  **params):
-        self.goal_space = observation_space if goal_space is None else goal_space
         assert issubclass(reinforcement_learning_agent_class, ValueBasedAgent)
         assert isinstance(action_space, (Box, Discrete)), ("The goal space should be an instance of gym.spaces.Box or "
                                                            "gym.space.Discrete.")
@@ -35,9 +34,8 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         assert isinstance(goal_space, Box), "The goal space should be an instance of gym.spaces.Box."
 
         # Super class init + add to self.init_params, parameters that are not send to it.
-        GoalConditionedAgent.__init__(self, observation_space, action_space, goal_space=self.goal_space, **params)
+        GoalConditionedAgent.__init__(self, observation_space, action_space, goal_space=goal_space, **params)
         self.init_params["reinforcement_learning_agent_class"] = reinforcement_learning_agent_class
-        self.init_params["goal_space"] = goal_space
         self.init_params["goal_from_observation_fun"] = goal_from_observation_fun
 
         # Setup goal_from_observation_fun
@@ -50,8 +48,8 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
 
         # Instantiate wrapped agent
         self.reinforcement_learning_agent_class = reinforcement_learning_agent_class
-        self.reinforcement_learning_agent: ValueBasedAgent = \
-            reinforcement_learning_agent_class(self.feature_space, action_space, **params)
+        self.reinforcement_learning_agent: ValueBasedAgent = (
+            reinforcement_learning_agent_class(self.feature_space, action_space, **params))
 
         self.name = "Goal conditioned " + self.reinforcement_learning_agent.name
 

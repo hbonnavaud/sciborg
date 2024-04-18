@@ -15,12 +15,18 @@ class GoalConditionedAgent(Agent, ABC):
 
     name = "Default goal conditioned agent"
 
-    def __init__(self, observation_space: Union[Box, Discrete], action_space: Union[Box, Discrete], **params):
+    def __init__(self,
+                 observation_space: Union[Box, Discrete],
+                 action_space: Union[Box, Discrete],
+                 goal_space=None,
+                 **params
+                 ):
         Agent.__init__(self, observation_space, action_space, **params)
+        self.init_params["goal_space"] = goal_space
         self.current_goal = None
 
         # Compute out goal space
-        self.goal_space = params.get("goal_space", self.observation_space)
+        self.goal_space = self.observation_space if goal_space is None else goal_space
         assert isinstance(self.goal_space, Box) or isinstance(self.goal_space, Discrete)
         self.goal_shape = self.goal_space.shape
 

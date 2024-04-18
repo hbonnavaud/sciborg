@@ -29,15 +29,15 @@ class TILO(HER):
         :param goal_space: gym.spaces.Space goal space.
         """
 
-        # Super class init + add to self.init_params, parameters that are not send to it.
-        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, goal_space=goal_space,
-                         goal_from_observation_fun=goal_from_observation_fun, **params)
-        self.init_params["get_features"] = get_features
-
         # Initialise self.get_features
         if get_features is not None:
             assert hasattr(get_features, "__call__"), "The get_features argument should be a function."
             self.get_features = get_features
+
+        # Super class init + add to self.init_params, parameters that are not send to it.
+        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, goal_space=goal_space,
+                         goal_from_observation_fun=goal_from_observation_fun, **params)
+        self.init_params["get_features"] = get_features
 
         # Modify instance name
         self.name = self.reinforcement_learning_agent.name + " + TILO"
