@@ -1,6 +1,8 @@
 import time
 import numpy as np
 from enum import Enum
+
+from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation
 
 
@@ -110,3 +112,37 @@ if __name__ == "__main__":
             for i, m in enumerate(messages):
                 print_replace_above(4 - i, m + str(num))
             time.sleep(.3)
+
+
+def get_interpolation_average(xs: list, ys: list, result_low=0, result_high=100, result_size=100) -> tuple:
+    """
+    Args:
+        xs: list of x values. xs[n] should be the list of x values associated to the y values in y[n].
+        ys: list of y values. ys[n] should be the list of y values associated to the x values in x[n].
+        result_low: min x value for the result.
+        result_high: max x value for the result.
+        result_size: how many points in the returned interpolation average.
+
+    Returns:
+        a tuple composed of, in this order, x values related to following, an average of the interpolations of the
+        data given in input.
+    """
+    assert len(xs) == len(ys)
+    for i in range(len(xs)):
+        assert len(xs[i]) == len(ys[i])
+    assert isinstance(result_size, int) and result_size > 0
+    assert result_low <= result_high
+
+    # Increase the reslut_low to the minimum interpolation values
+    xs_higher_min = max([min(x) for x in xs])
+    xs_lower_max = min([max(x) for x in xs])
+    result_low = max(result_low, xs_higher_min)
+    result_high = min(result_high, xs_lower_max)
+
+    interpolations = [interp1d(x, y, 'cubic') for x, y in zip(xs, ys)]
+    abscissas = np.linspace(result_low, result_high, num=result_size, endpoint=True)
+    interpolations_int = [interpolation(abscissas) for interpolation in interpolations]
+    data_collection = np.vstack(interpolations_int)
+    mean = np.mean(data_collection, axis=0)
+    std = np.std(data_collection, axis=0)
+    return abscissas, mean, std
