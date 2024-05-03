@@ -1,7 +1,5 @@
 import time
 import numpy as np
-from enum import Enum
-
 from scipy.interpolate import interp1d
 from scipy.spatial.transform import Rotation
 

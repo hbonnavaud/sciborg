@@ -10,7 +10,7 @@ from .utils.indexes import *
 from .maps.maps_index import MapsIndex
 from scipy.spatial import distance
 from skimage.draw import line_aa
-from environments.environment import Environment
+from ..environment import Environment
 
 
 class PointEnv(Environment):
@@ -20,7 +20,7 @@ class PointEnv(Environment):
 
     def __init__(self, map_name: str = MapsIndex.EMPTY.value, action_noise=1.0, reset_anywhere=True):
         self.reset_anywhere = reset_anywhere
-        self.maze_map = np.array(importlib.import_module("environments.maps." + map_name).maze_array)
+        self.maze_map = np.array(importlib.import_module("sciborg.environments.point_maze.maps." + map_name).maze_array)
         self.height, self.width = self.maze_map.shape
         self.action_noise = action_noise
         self.observation_space = spaces.Box(low=np.array([- self.width / 2, - self.height / 2]),

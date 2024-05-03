@@ -1,7 +1,7 @@
 import numpy as np
 from typing import Union
 from gym.spaces import Box, Discrete
-from agents.goal_conditioned.her import HER
+from ..goal_conditioned.her import HER
 
 
 class TILO(HER):

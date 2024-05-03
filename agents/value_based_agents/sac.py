@@ -1,22 +1,15 @@
 # Goal conditioned deep Q-network
-
 import copy
-import os.path
-import pickle
-
 import numpy as np
 import torch
 from gym.spaces import Box
 from torch.nn import ReLU, Tanh
 from torch.nn.functional import normalize
-
-from agents.utils.nn import MLP
-from agents.value_based_agents.value_based_agent import ValueBasedAgent
+from ..utils.nn import MLP
+from .value_based_agent import ValueBasedAgent
 from torch import optim
 from torch.nn import functional
 from torch.distributions.normal import Normal
-
-from utils import create_dir
 
 
 class SAC(ValueBasedAgent):
@@ -31,12 +24,12 @@ class SAC(ValueBasedAgent):
         """
 
         super().__init__(observation_space, action_space, **params)
-
         self.actor_lr = params.get("actor_lr", 0.0005)
         self.critic_lr = params.get("critic_lr", 0.0005)
         alpha = params.get("alpha", None)
         self.critic_alpha = params.get("critic_alpha", 0.6)
         self.actor_alpha = params.get("actor_alpha", 0.05)
+        self.nb_gradient_steps = params.get("nb_gradient_steps", 1)
         if alpha is not None:
             self.critic_alpha = alpha
             self.actor_alpha = alpha
@@ -85,7 +78,7 @@ class SAC(ValueBasedAgent):
 
         if isinstance(actor_input, np.ndarray):
             actor_input = torch.from_numpy(actor_input).to(self.device)
-        actor_input = normalize(actor_input, p=2., dim=-1) # Tensor torch.float64
+        actor_input = normalize(actor_input, p=2., dim=-1)  # Tensor torch.float64
 
         # Forward
         actor_output = actor_network(actor_input)
@@ -133,7 +126,7 @@ class SAC(ValueBasedAgent):
 
     def learn(self):
         if not self.under_test and len(self.replay_buffer) > self.batch_size:
-            for _ in range(20):
+            for _ in range(self.nb_gradient_steps):
                 observations, actions, rewards, new_observations, done = self.replay_buffer.sample(self.batch_size)
 
                 # Training critic

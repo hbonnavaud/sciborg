@@ -3,12 +3,10 @@ from copy import deepcopy
 import numpy as np
 import torch
 from torch.nn import ReLU, Tanh
-from agents.value_based_agents.dqn import DQN
-from agents.utils.nn import MLP
+from .dqn import DQN
+from ..utils.nn import MLP
 from torch import optim
 import torch.nn.functional as F
-
-from utils import create_dir
 
 
 class DistributionalDQN(DQN):

@@ -1,12 +1,10 @@
 import copy
 import random
-
 import numpy as np
-
 from .grid_world import GridWorld
 from .maps.maps_index import MapsIndex
 from .utils.indexes import Colors
-from environments.goal_conditioned_environment import GoalConditionedEnvironment
+from ..goal_conditioned_environment import GoalConditionedEnvironment
 
 
 class GoalConditionedGridWorld(GridWorld, GoalConditionedEnvironment):

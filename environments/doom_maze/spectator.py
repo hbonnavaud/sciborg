@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from utils import generate_video
+from ...utils import generate_video
 import argparse
 from time import sleep
 from vizdoom import *

@@ -3,13 +3,12 @@ import json
 import os.path
 import pickle
 from typing import Union
-
+import inspect
 import gym
 from gym.spaces import Box, Discrete
 import torch
 from abc import ABC, abstractmethod
-
-from utils import create_dir
+from ..utils import create_dir
 
 
 class Agent(ABC):
@@ -29,10 +28,16 @@ class Agent(ABC):
             "The observation space should be an instance of gym.spaces.Space"
         assert isinstance(action_space, Box) or isinstance(action_space, Discrete), \
             "The action space should be an instance of gym.spaces.Space"
+        # TODO concatenate dicts in the stack
+        # Get the init parameters
+        self.init_params = {}
+        frame = inspect.stack()[0][0]
+        while frame is not None and "self" in frame.f_locals and frame.f_locals["self"] == self:
+            self.init_params.update(frame.f_locals)
+            frame = frame.f_back
+        for ignored in ["self", "frame", "__class__"]:
+            self.init_params.pop(ignored)
 
-        self.init_params = params
-        self.init_params["observation_space"] = observation_space   # used for copy
-        self.init_params["action_space"] = action_space
         self.observation_space = observation_space
         self.action_space = action_space
         self.device = params.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
@@ -42,8 +47,11 @@ class Agent(ABC):
         self.observation_size = self.observation_space.shape[0]  # Assume observation space is continuous
         self.observation_shape = self.observation_space.shape
 
-        self.continuous = isinstance(self.action_space, gym.spaces.Box)
-        self.nb_actions = self.action_space.shape[0] if self.continuous else self.action_space.n
+        if isinstance(self.action_space, gym.spaces.Box):
+            self.nb_actions = self.action_space.shape[0]
+        else:
+            self.nb_actions = self.action_space.n
+
         self.last_observation = None  # Useful to store interaction when we receive (new_stare, reward, done) tuple
         self.episode_id = 0
         self.episode_time_step_id = 0
@@ -96,7 +104,7 @@ class Agent(ABC):
     def save(self, directory):
         create_dir(directory)
         save_in_json = {}
-        save_in_pickle = {}
+        save_in_pickle = {"class": self.__class__}
         for k, v in self.__dict__.items():
             if isinstance(v, torch.nn.Module):
                 torch.save(v.state_dict(), str(directory / (k + ".pt")))
@@ -132,19 +140,18 @@ class Agent(ABC):
         try:
             saved_in_pickle = pickle.load(open(str(directory / "objects_attributes.pk"), "rb"))
             for k, v in saved_in_pickle.items():
+                if k == "class":
+                    continue
                 self.__setattr__(k, v)
         except FileNotFoundError:
             pass
 
-        # Load wrapped agents
+        # Load models and wrapped agents
         for k, v in self.__dict__.items():
             if isinstance(v, Agent):
-                self.__setattr__(k, v.load(directory / k))
-
-        # Load the rest
-        for k, v in self.__dict__.items():
+                v.load(directory / k)
             if isinstance(v, torch.nn.Module):
-                self.__getattribute__(k).load_state_dict(torch.load(str(directory / k + ".pt")))
+                self.__getattribute__(k).load_state_dict(torch.load(str(directory / (k + ".pt"))))
 
     @abstractmethod
     def action(self, observation, explore=True):

@@ -14,8 +14,8 @@ from gym.spaces import Box, Discrete
 from .maps.maps_index import MapsIndex
 from .maps.tile_type import TileType
 
-from environments.goal_conditioned_environment import GoalConditionedEnvironment
-from utils import generate_video, save_image
+from ..goal_conditioned_environment import GoalConditionedEnvironment
+from ...utils import generate_video, save_image
 from .wads_builder import build_wad
 
 

@@ -4,7 +4,7 @@ import numpy as np
 from .point_env import PointEnv
 from .utils.indexes import Colors
 from .maps.maps_index import MapsIndex
-from environments.goal_conditioned_environment import GoalConditionedEnvironment
+from ..goal_conditioned_environment import GoalConditionedEnvironment
 
 
 class GoalConditionedPointEnv(PointEnv, GoalConditionedEnvironment):

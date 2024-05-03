@@ -78,7 +78,7 @@ def generate_xml(map_name: str) -> (dict, str):
             world_body_node = child
 
     # Load maps data
-    maze_array = np.array(importlib.import_module("environments.maps." + map_name).maze_array)
+    maze_array = np.array(importlib.import_module("sciborg.environments.maps." + map_name).maze_array)
 
     # Load walls
     width = len(maze_array[0])

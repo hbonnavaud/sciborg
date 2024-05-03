@@ -6,9 +6,10 @@ import os
 import numpy as np
 from gym.spaces import Box, Discrete
 import torch
-from agents.goal_conditioned.goal_conditioned_agent import GoalConditionedAgent
-from agents.value_based_agents.value_based_agent import ValueBasedAgent
-from utils import create_dir
+
+from ..goal_conditioned.goal_conditioned_agent import GoalConditionedAgent
+from ..value_based_agents.value_based_agent import ValueBasedAgent
+from ...utils import create_dir
 
 
 class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):

@@ -13,7 +13,7 @@ from .mujoco_files.xml_generator import generate_xml
 from .mujoco_model_utils import quat2mat, euler2quat, mat2euler
 from enum import Enum
 
-from environments.goal_conditioned_environment import GoalConditionedEnvironment
+from ..goal_conditioned_environment import GoalConditionedEnvironment
 
 
 class TileType(Enum):

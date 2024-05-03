@@ -6,9 +6,9 @@ import torch
 from gym.spaces import Box
 from torch.nn import ReLU, Tanh
 
-from utils import create_dir
-from agents.value_based_agents.value_based_agent import ValueBasedAgent
+from ...utils import create_dir
 from ..utils.nn import MLP
+from .value_based_agent import ValueBasedAgent
 from torch import optim
 
 

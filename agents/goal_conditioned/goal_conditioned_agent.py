@@ -4,7 +4,7 @@ from typing import Union
 
 import numpy as np
 from gym.spaces import Box, Discrete
-from agents.agent import Agent
+from ..agent import Agent
 
 
 class GoalConditionedAgent(Agent, ABC):

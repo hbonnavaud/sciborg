@@ -5,17 +5,14 @@ from multiprocessing import Process
 import matplotlib
 from matplotlib import pyplot as plt
 import math
-
 from skimage.draw import line_aa
-
-from environments.robotic_environment.launch_gazebo import launch_gazebo
 import numpy as np
 from gym.spaces import Box
 from std_srvs.srv import Empty
-from environments.robotic_environment.simulations_assets.build_world_from_map import (generate_xml,
-                                                                                      simulation_pos_to_maze_pos,
-                                                                                      maze_pos_to_simulation_pos)
-from environments.goal_conditioned_environment import GoalConditionedEnvironment
+from .launch_gazebo import launch_gazebo
+from .simulations_assets.build_world_from_map import (generate_xml, simulation_pos_to_maze_pos,
+                                                      maze_pos_to_simulation_pos)
+from ..goal_conditioned_environment import GoalConditionedEnvironment
 import rclpy
 from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Odometry
@@ -23,7 +20,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Pose, Point
 from gazebo_msgs.srv import SetEntityState
 from rclpy.qos import QoSProfile
-from utils import quaternion_to_euler, place_line
+from ...utils import quaternion_to_euler, place_line
 
 
 class TileType(Enum):

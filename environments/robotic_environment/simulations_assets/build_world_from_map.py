@@ -1,11 +1,8 @@
-import inspect
 import math
 import pathlib
 import numpy as np
 import importlib
-import os.path
 from lxml import etree
-from lxml.builder import E
 
 
 def load_walls(maze_array):
@@ -48,7 +45,6 @@ def load_walls(maze_array):
 
             # Add this wall to the memory
             horizontal_walls.append([horizontal_wall[0], horizontal_wall[-1]])
-            print("added horizontal wall ", horizontal_walls[-1])
         else:
             # replace every tile in the chosen wall by 0, so it will not be added again
             col_index = vertical_wall[0][1]
@@ -57,7 +53,6 @@ def load_walls(maze_array):
 
             # Add this wall to the memory
             vertical_walls.append([vertical_wall[0], vertical_wall[-1]])
-            print("added vertical wall ", vertical_walls[-1])
     return horizontal_walls, vertical_walls
 
 
@@ -129,7 +124,7 @@ def generate_xml(map_name: str, robot_name: str, scale: float = 1., walls_height
         if __name__ != "__main__":
             import_path = ".".join(__name__.split(".")[:-1]) + ".maps." + map_name
         else:
-            import_path = "environments.my_robotic_room.simulations_assets.maps." + map_name
+            import_path = "sciborg.environments.my_robotic_room.simulations_assets.maps." + map_name
         maze_array = np.array(importlib.import_module(import_path).maze_array)
     except ModuleNotFoundError:
         raise FileNotFoundError("Could not find map with name " + map_name + ".py, Please verify it is located in "

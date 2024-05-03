@@ -3,10 +3,10 @@ from typing import Union
 import numpy as np
 import torch
 
-from agents.agent import Agent
+from ..agent import Agent
 from abc import ABC, abstractmethod
 from gym.spaces import Box, Discrete
-from agents.utils.replay_buffer import ReplayBuffer
+from ..utils.replay_buffer import ReplayBuffer
 
 
 class ValueBasedAgent(Agent, ABC):

@@ -1,12 +1,12 @@
 # Goal conditioned deep Q-network
 import pickle
-from agents.value_based_agents.value_based_agent import ValueBasedAgent
-from ..utils.nn import MLP
 import copy
 import numpy as np
 import torch
 from torch import optim
 from torch.nn import ReLU
+from .value_based_agent import ValueBasedAgent
+from ..utils.nn import MLP
 
 
 class DQN(ValueBasedAgent):
