@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 from math import ceil, sqrt
 from random import random, randint
-from .ansi import Ansi
+from utils.ansi import Ansi
 
 
 class Loader:
@@ -32,7 +32,6 @@ class Loader:
         self.loader_sequence_position = 0
 
     def step(self):
-        print(self, end="\r")
         self.loader_sequence_position += 1
 
     def __str__(self):
@@ -175,12 +174,14 @@ if __name__ == "__main__":
     loader = Loader("Initialising usage examples ...", "snake")
     for _ in range(10):
         loader.step()
+        print(loader, end="\r")
         time.sleep(.4)
     print("")
 
     bar = ProgressBar(name="Loading ... ", reverse=False, print_length=100)
     for i in range(50):
         bar.step(randint(1, 4))
+        print(bar, end="\r")
         time.sleep(random() / 2)
     print("")
 
@@ -189,14 +190,16 @@ if __name__ == "__main__":
     bar.reset()
     for i in range(50):
         bar.step(randint(1, 4))
+        print(bar, end="\r")
         time.sleep(random() / 2)
     print("")
 
-    bar.name = "I have be reset."
+    bar.name = "I have been reset."
     bar.reverse = False
     bar.reset()
     for i in range(50):
         bar.step(randint(1, 4))
+        print(bar, end="\r")
         time.sleep(0.05)
     print("")
 
@@ -205,6 +208,7 @@ if __name__ == "__main__":
     bar.reset()
     for i in range(50):
         bar.step(randint(1, 4))
+        print(bar, end="\r")
         time.sleep(0.1)
     print("")
 

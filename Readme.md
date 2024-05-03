@@ -17,16 +17,6 @@ Everything here should work, but expect a high frequency of modifications and "i
    - DIAYN: an agent that wrap an value-based RL agent and make it learn skills
    - A model-based agent (probably MuZero if I succeed ...)
    - ICM (intrinsic curiosity module)
- - Propose a new usage with a `rlf` bash command. \
-   The current easier usage, is to fork or download this repository, which force you to clone/download every
-   agent, environment, or experiment in this repository. 
-   It is not a big deal now but it can become one in the future as new agents and elements are added. \
-   The command will have a simple structure:
-   - `rlf init <project_name>`: create a repository named `<project_name>` with the basic structure of this repository. 
-   - `rlf use <component>`: search for the given component (could be an agent, an environment, en experiment folder)
-      on the main branch, and download it with all used classes. \
-      Ex: `rlf use DQN` download classes "DQN", "ValueBasedAgent", and "Agent", and put them in the agent folder.
-   - `rlf update <component>` update a component if it has been modified on the git's main branch.
 
 ## Give it a try
 run:
