@@ -1,4 +1,6 @@
-# RLF
+# Sciborg
+Old name: RLFramework
+
 Reinforcement Learning Framework
 
 ### Disclaimer
