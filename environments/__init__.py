@@ -1,43 +1,44 @@
 from .environment import Environment
 from .goal_conditioned_environment import GoalConditionedEnvironment
-from .robotic_environment import *
-from .point_maze import *
+import importlib
+from .. import settings
 
-failed_one_import = False
+# For every environment module, we use try except statements in case one environment have unmeet dependencies but the
+# user wants to use the others.
+# For an example, it allows you to import GridWorld without having mujoco or vizdoom installed.
 
-
-def print_warning(message):
-    global failed_one_import
-    if not failed_one_import:
-        print("\n")
-        failed_one_import = True
-    print(message)
-
-
-# Import vizdoom_maze if available
+# Import grid-world
 try:
-    from .doom_maze import *
-except ModuleNotFoundError as e:
-    module_name = e.name if e.name != "omg" else "omgifol"
-    # print_warning("  > WARNING, cannot use vizdoom_maze because of missing module '" + module_name + "'")
+    from .grid_world import *
 except Exception as e:
-    # print_warning("  > WARNING, cannot use vizdoom_maze because of unknown error.")
-    raise e
+    if not settings.supress_import_warnings:
+        print(f"Warning: module 'grid_world' cannot be imported due to the following error: ", e, sep="")
 
-# Import ant_maze if available
+# Import point-maze
+try:
+    from .point_maze import *
+except Exception as e:
+    if not settings.supress_import_warnings:
+        print(f"Warning: module 'point_maze' cannot be imported due to the following error: ", e, sep="")
+
+# Import ant-maze
 try:
     from .ant_maze import *
-except ModuleNotFoundError as e:
-    module_name = e.name
-    # print_warning("  > WARNING, cannot use ant_maze because of missing module '" + module_name + "'")
 except Exception as e:
-    if e.args[0].split("\n")[-1].startswith("export LD_LIBRARY_PATH="):
-        pass
-        # print_warning("  > WARNING, cannot use ant_maze because of wrong environment variable value." +
-        #               "\n    Add '" + e.args[0].split("\n")[-1] + "' to your bashrc and try again.")
-    else:
-        # print_warning("  > WARNING, cannot use ant_maze because of unknown error.")
-        raise e
+    if not settings.supress_import_warnings:
+        print(f"Warning: module 'ant_maze' cannot be imported due to the following error: ", e, sep="")
 
-# if failed_one_import:
-#     print("")
+# Import doom-maze
+try:
+    from .doom_maze import *
+except Exception as e:
+    if not settings.supress_import_warnings:
+        print(f"Warning: module 'doom_maze' cannot be imported due to the following error: ", e, sep="")
+
+# Import robotic environment
+try:
+    from .robotic_environment import *
+except Exception as e:
+    if not settings.supress_import_warnings:
+        print(f"Warning: module 'robotic_environment' cannot be imported due to the following error: ", e, sep="")
+        

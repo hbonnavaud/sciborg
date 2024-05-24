@@ -1,4 +1,3 @@
-import os.path
 from typing import Union
 import numpy as np
 import torch
@@ -18,10 +17,6 @@ class ValueBasedAgent(Agent, ABC):
         @param params: Optional parameters.
         """
         super().__init__(observation_space, action_space, **params)
-
-        self.batch_size = params.get("batch_size", 150)
-        self.buffer_max_size = params.get("buffer_max_size", int(1e6))
-        self.replay_buffer = ReplayBuffer(self.buffer_max_size, self.device)
 
     def scale_action(self, actions: Union[np.ndarray, torch.Tensor], source_action_box: Box):
         """
@@ -46,36 +41,12 @@ class ValueBasedAgent(Agent, ABC):
                                        torch.tensor(target_high, device=self.device))
 
         # Scale action to the action space
-        source_range = source_high - source_low
-        target_range = target_high - target_low
+        scale = (target_high - target_low) / (source_high - source_low)
+        actions = actions * scale + (target_low - (source_low * scale))
 
-        scale = target_range / source_range
-        actions = actions * scale
-        actions = actions + (target_low - (source_low * scale))
+        # Clip actions to the action space to prevent floating point errors
         clip_fun = np.clip if isinstance(actions, np.ndarray) else torch.clamp
-        actions = clip_fun(actions, target_low, target_high)
-        return actions
-
-    def save_interaction(self, *interaction_data):
-        """
-        Function that is called to ask our agent to learn about the given interaction. This function is separated from
-        self.on_action_stop(**interaction_data) because we can imagine agents that do not learn on every interaction, or
-        agents that learn on interaction they didn't make (like HER that add interaction related to fake goals in their
-        last trajectory).
-        on_action_stop is used to update variables likes self.last_observation or self.simulation_time_step_id, and
-        learn_interaction is used to know the set of interactions we can learn about.
-
-        Example: Our implementation of HER show a call to 'learn_interaction' without 'on_action_stop'
-        (two last lines of 'her' file).
-        """
-        assert not self.under_test
-        self.replay_buffer.append(interaction_data)
-
-    def process_interaction(self, action, reward, new_observation, done, learn=True):
-        if learn and not self.under_test:
-            self.save_interaction(self.last_observation, action, reward, new_observation, done)
-            self.learn()
-        super().process_interaction(action, reward, new_observation, done, learn=learn)
+        return clip_fun(actions, target_low, target_high)
 
     @abstractmethod
     def get_value(self, features, actions=None):
