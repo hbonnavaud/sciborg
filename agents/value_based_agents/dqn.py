@@ -1,6 +1,7 @@
 # Goal conditioned deep Q-network
 import pickle
 import copy
+from typing import Union
 import numpy as np
 import torch
 from torch import optim
@@ -17,31 +18,46 @@ class DQN(ValueBasedAgent):
 
     name = "DQN"
 
-    def __init__(self, observation_space, action_space, **params):
+    def __init__(self, 
+                 observation_space, 
+                 action_space,
+                 gamma: float = 0.95,
+                 layer_1_size: int = 64,
+                 layer_2_size: int = 64,
+                 epsilon_min: float = 0.001,
+                 epsilon_max: float = 1.,
+                 epsilon_decay_delay: int = 20,
+                 epsilon_decay_period: int = 1000,
+                 model: Union[None, torch.nn.module] = None,
+                 learning_rate: float = 0.01,
+                 steps_before_target_update: int = 1,
+                 tau: float = 0.001,
+                 nb_gradient_steps: int = 1
+                 ):
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.
         @param params: Optional parameters.
         """
 
-        super().__init__(observation_space, action_space, **params)
+        super().__init__(observation_space, action_space)
 
-        self.gamma = params.get("gamma", 0.95)
-        self.layer_1_size = params.get("layer_1_size", 64)
-        self.layer_2_size = params.get("layer_2_size", 64)
-        self.epsilon_min = params.get("epsilon_min", 0.001)
-        self.epsilon_max = params.get("epsilon_max", 1.)
-        self.epsilon_decay_delay = params.get("epsilon_decay_delay", 20)
+        self.gamma = gamma
+        self.layer_1_size = layer_1_size
+        self.layer_2_size = layer_2_size
+        self.epsilon_min = epsilon_min
+        self.epsilon_max = epsilon_max
+        self.epsilon_decay_delay = epsilon_decay_delay
         self.epsilon = None
-        self.epsilon_decay_period = params.get("epsilon_decay_period", 1000)
-        self.model = params.get("model", None)
+        self.epsilon_decay_period = epsilon_decay_period
+        self.model = model
 
         #  NEW, goals will be stored inside the replay buffer. We need a specific one with enough place to do so
-        self.learning_rate = params.get("learning_rate", 0.01)
-        self.steps_before_target_update = params.get("steps_before_target_update", 1)
+        self.learning_rate = learning_rate
+        self.steps_before_target_update = steps_before_target_update
         self.steps_since_last_target_update = 0
-        self.tau = params.get("tau", 0.001)
-        self.nb_gradient_steps = params.get("nb_gradient_steps", 1)
+        self.tau = tau
+        self.nb_gradient_steps = nb_gradient_steps
 
         self.epsilon_step = (self.epsilon_max - self.epsilon_min) / self.epsilon_decay_period
         self.total_steps = 0

@@ -5,6 +5,7 @@ import pickle
 from typing import Union
 import inspect
 import gym
+import numpy as np
 from gym.spaces import Box, Discrete
 import torch
 from abc import ABC, abstractmethod
@@ -28,7 +29,7 @@ class Agent(ABC):
             "The observation space should be an instance of gym.spaces.Space"
         assert isinstance(action_space, Box) or isinstance(action_space, Discrete), \
             "The action space should be an instance of gym.spaces.Space"
-        # TODO concatenate dicts in the stack
+
         # Get the init parameters
         self.init_params = {}
         frame = inspect.stack()[0][0]
@@ -38,19 +39,25 @@ class Agent(ABC):
         for ignored in ["self", "frame", "__class__"]:
             self.init_params.pop(ignored)
 
-        self.observation_space = observation_space
-        self.action_space = action_space
         self.device = params.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
 
-        # Mandatory parameters
-        assert not isinstance(self.observation_space, dict), "observation space as dictionary is not supported."
-        self.observation_size = self.observation_space.shape[0]  # Assume observation space is continuous
-        self.observation_shape = self.observation_space.shape
-
-        if isinstance(self.action_space, gym.spaces.Box):
-            self.nb_actions = self.action_space.shape[0]
+        # Observation info
+        self.observation_space = observation_space
+        assert isinstance(observation_space, (Box, Discrete)), "observation space type is not supported."
+        if isinstance(observation_space, Box):
+            self.observation_size = np.prod(self.observation_space.shape)
         else:
-            self.nb_actions = self.action_space.n
+            assert isinstance(observation_space, Discrete)
+            self.observation_size = observation_space.n
+
+        # Action info
+        self.action_space = action_space
+        assert isinstance(action_space, (Box, Discrete)), "action space type is not supported."
+        if isinstance(self.action_space, gym.spaces.Box):
+            self.action_size = np.prod(self.action_space.shape)
+        else:
+            assert isinstance(self.action_space, Discrete)
+            self.action_size = self.action_space.n
 
         self.last_observation = None  # Useful to store interaction when we receive (new_stare, reward, done) tuple
         self.episode_id = 0
@@ -94,9 +101,6 @@ class Agent(ABC):
             else:
                 setattr(result, k, copy.deepcopy(v, memo))
         return result
-
-    def reset(self):
-        self.__init__(**self.init_params)
 
     def copy(self):
         return copy.deepcopy(self)

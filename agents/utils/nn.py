@@ -45,7 +45,9 @@ class NeuralNetwork(Module):
     def forward(self, input_data):
         if isinstance(input_data, np.ndarray):
             input_data = torch.from_numpy(input_data).to(self.device)
-        input_data = input_data.float()
+        else:
+            assert isinstance(input_data, torch.Tensor) and input_data.device == self.device
+        input_data = input_data.astype(self.module.dtype)
         return self.module(input_data)
 
     def converge_to(self, other_nn, tau=None):

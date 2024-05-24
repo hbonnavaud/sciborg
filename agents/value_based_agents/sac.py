@@ -10,34 +10,49 @@ from .value_based_agent import ValueBasedAgent
 from torch import optim
 from torch.nn import functional
 from torch.distributions.normal import Normal
+from typing import Union
 
 
 class SAC(ValueBasedAgent):
 
     name = "SAC"
 
-    def __init__(self, observation_space, action_space, **params):
+    def __init__(self, 
+                 observation_space, 
+                 action_space,
+                 actor_lr: float = 0.0005,
+                 critic_lr: float = 0.0005,
+                 alpha: Union[None, float] = None,
+                 critic_alpha: float = 0.6,
+                 actor_alpha: float = 0.05,
+                 nb_gradient_steps: int = 1,
+                 gamma: float = 0.99,
+                 tau: float = 0.005,
+                 layer1_size: int = 250,
+                 layer2_size: int = 150,
+                 reward_scale: int = 15,
+                 ):
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.
         @param params: Optional parameters.
         """
 
-        super().__init__(observation_space, action_space, **params)
-        self.actor_lr = params.get("actor_lr", 0.0005)
-        self.critic_lr = params.get("critic_lr", 0.0005)
-        alpha = params.get("alpha", None)
-        self.critic_alpha = params.get("critic_alpha", 0.6)
-        self.actor_alpha = params.get("actor_alpha", 0.05)
-        self.nb_gradient_steps = params.get("nb_gradient_steps", 1)
+        super().__init__(observation_space, action_space)
+        self.actor_lr = actor_lr
+        self.critic_lr = critic_lr
+        alpha = alpha
+        self.critic_alpha = critic_alpha
+        self.actor_alpha = actor_alpha
+        self.nb_gradient_steps = nb_gradient_steps
         if alpha is not None:
             self.critic_alpha = alpha
             self.actor_alpha = alpha
-        self.gamma = params.get("gamma", 0.99)
-        self.tau = params.get("tau", 0.005)
-        self.layer_1_size = params.get("layer1_size", 250)
-        self.layer_2_size = params.get("layer2_size", 150)
-        self.reward_scale = params.get("reward_scale", 15)
+        self.gamma = gamma
+        self.tau = tau
+        self.layer_1_size = layer1_size
+        self.layer_2_size = layer2_size
+        self.reward_scale = reward_scale
 
         self.policy_update_frequency = 2
         self.learning_step = 1
