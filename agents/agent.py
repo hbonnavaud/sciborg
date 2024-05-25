@@ -55,9 +55,6 @@ class Agent(ABC):
         assert isinstance(action_space, (Box, Discrete)), "action space type is not supported."
         if isinstance(self.action_space, gym.spaces.Box):
             self.action_size = np.prod(self.action_space.shape)
-        else:
-            assert isinstance(self.action_space, Discrete)
-            self.action_size = self.action_space.n
 
         self.last_observation = None  # Useful to store interaction when we receive (new_stare, reward, done) tuple
         self.episode_id = 0

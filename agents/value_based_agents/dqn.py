@@ -4,9 +4,10 @@ import copy
 from typing import Union
 import numpy as np
 import torch
-from torch import optim
-from torch.nn import ReLU
+from torch import optim, nn
+from torch.nn import functional
 from .value_based_agent import ValueBasedAgent
+from ..utils import ReplayBuffer
 from ..utils.nn import MLP
 
 
@@ -21,56 +22,68 @@ class DQN(ValueBasedAgent):
     def __init__(self, 
                  observation_space, 
                  action_space,
+                 batch_size: int = 256,
+                 replay_buffer_size: int = int(1e6),
+                 steps_before_learning: int = 10000,
+                 nb_gradient_steps: int = 1,
                  gamma: float = 0.95,
-                 layer_1_size: int = 64,
-                 layer_2_size: int = 64,
-                 epsilon_min: float = 0.001,
-                 epsilon_max: float = 1.,
-                 epsilon_decay_delay: int = 20,
+
+                 layer_1_size: int = 128,
+                 layer_2_size: int = 84,
+
+                 initial_epsilon: float = 1,
+                 final_epsilon: float = 0.05,
+                 steps_before_epsilon_decay: int = 20,
                  epsilon_decay_period: int = 1000,
-                 model: Union[None, torch.nn.module] = None,
+
+                 model: Union[None, torch.nn.Module] = None,
+                 optimizer=optim.Adam,
+                 criterion=functional.mse_loss,
                  learning_rate: float = 0.01,
-                 steps_before_target_update: int = 1,
-                 tau: float = 0.001,
-                 nb_gradient_steps: int = 1
+                 tau: float = 2.5e-4
                  ):
-        """
-        @param observation_space: Environment's observation space.
-        @param action_space: Environment's action_space.
-        @param params: Optional parameters.
-        """
 
         super().__init__(observation_space, action_space)
 
+        self.batch_size = batch_size
+        self.steps_before_learning = steps_before_learning
+        self.nb_gradient_steps = nb_gradient_steps
         self.gamma = gamma
+        self.replay_buffer = ReplayBuffer(replay_buffer_size, self.device)
+
         self.layer_1_size = layer_1_size
         self.layer_2_size = layer_2_size
-        self.epsilon_min = epsilon_min
-        self.epsilon_max = epsilon_max
-        self.epsilon_decay_delay = epsilon_decay_delay
+
+        self.initial_epsilon = initial_epsilon
+        self.final_epsilon = final_epsilon
+        self.steps_before_epsilon_decay = steps_before_epsilon_decay
         self.epsilon = None
         self.epsilon_decay_period = epsilon_decay_period
-        self.model = model
 
-        #  NEW, goals will be stored inside the replay buffer. We need a specific one with enough place to do so
+        self.optimizer = optimizer
+        assert issubclass(optimizer, optim.Optimizer)
+        self.criterion = criterion
         self.learning_rate = learning_rate
-        self.steps_before_target_update = steps_before_target_update
-        self.steps_since_last_target_update = 0
         self.tau = tau
-        self.nb_gradient_steps = nb_gradient_steps
 
-        self.epsilon_step = (self.epsilon_max - self.epsilon_min) / self.epsilon_decay_period
+        self.epsilon_step = (self.initial_epsilon - self.final_epsilon) / self.epsilon_decay_period
         self.total_steps = 0
 
         # NEW, The input observation size is multiplied by two because we need to also take the goal as input
-        if self.model is None:
-            self.model = MLP(self.observation_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
-                             self.nb_actions, learning_rate=self.learning_rate, optimizer_class=optim.Adam,
-                             device=self.device).float()
-
-        self.criterion = torch.nn.SmoothL1Loss()
-        self.target_model = copy.deepcopy(self.model).to(self.device)
-        self.epsilon = self.epsilon_max
+        if model is None:
+            self.model = nn.Sequential(
+                nn.Linear(self.observation_size, layer_1_size),
+                nn.ReLU(),
+                nn.Linear(layer_1_size, layer_2_size),
+                nn.ReLU(),
+                nn.Linear(layer_2_size, self.action_space.n)
+            )
+        else:
+            assert isinstance(model, torch.nn.Module)
+            self.model = model
+        assert issubclass(optimizer, optim.Optimizer)
+        self.optimizer = optimizer(self.model.parameters(), lr=self.learning_rate)
+        self.target_model = copy.deepcopy(self.model)
 
     def set_device(self, device):
         self.device = device
@@ -89,11 +102,11 @@ class DQN(ValueBasedAgent):
         return values.cpu().detach().numpy()
 
     def action(self, observation, explore=True):
-        if explore and not self.under_test and self.training_steps_done > self.epsilon_decay_delay:
-            self.epsilon = max(self.epsilon_min, self.epsilon - self.epsilon_step)
+        if explore and not self.under_test and self.training_steps_done > self.steps_before_epsilon_decay:
+            self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_step)
 
         if explore and not self.under_test and np.random.rand() < self.epsilon:  # Epsilon greedy
-            action = np.random.randint(self.nb_actions)
+            action = np.random.randint(self.action_space.n)
         else:
             # greedy_action(self.model, observation) function in RL5 notebook
             with torch.no_grad():
@@ -103,50 +116,14 @@ class DQN(ValueBasedAgent):
 
     def learn(self):
         assert not self.under_test
-        for _ in range(self.nb_gradient_steps):
-            if len(self.replay_buffer) > self.batch_size:
+        if self.training_steps_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
+            for _ in range(self.nb_gradient_steps):
                 observations, actions, rewards, new_observations, dones = self.replay_buffer.sample(self.batch_size)
                 q_prime = self.target_model(new_observations).max(1)[0].detach()
-                update = rewards + self.gamma * (1 - dones) * q_prime
-                q_s_a = self.model(observations).gather(1, actions.to(torch.long).unsqueeze(1))
-                loss = self.criterion(q_s_a, update.unsqueeze(1))
+                q_target = rewards + self.gamma * (1 - dones) * q_prime
+                q_values = self.model(observations).gather(1, actions.to(torch.long).unsqueeze(1))
+                loss = self.criterion(q_values, q_target.unsqueeze(1))
                 self.model.learn(loss)
 
-        self.steps_since_last_target_update += 1
-        if self.steps_since_last_target_update >= self.steps_before_target_update:
-
-            self.target_model.converge_to(self.model, self.tau)
-            self.steps_since_last_target_update = 0
-
-    def save(self, directory):
-        super().save(directory)
-
-        with open(directory + "observation_space.pkl", "wb") as f:
-            pickle.dump(self.observation_space, f)
-        with open(directory + "action_space.pkl", "wb") as f:
-            pickle.dump(self.action_space, f)
-        with open(directory + "init_params.pkl", "wb") as f:
-            pickle.dump(self.init_params, f)
-
-        torch.save(self.model, directory + "model.pt")
-        torch.save(self.target_model, directory + "target_model.pt")
-
-        with open(directory + "replay_buffer.pkl", "wb") as f:
-            pickle.dump(self.replay_buffer, f)
-
-    def load(self, directory):
-        super().load(directory)
-
-        with open(directory + "observation_space.pkl", "rb") as f:
-            self.observation_space = pickle.load(f)
-        with open(directory + "action_space.pkl", "rb") as f:
-            self.action_space = pickle.load(f)
-        with open(directory + "init_params.pkl", "rb") as f:
-            self.init_params = pickle.load(f)
-        self.reset()
-
-        self.model = torch.load(directory + "model.pt")
-        self.target_model = torch.load(directory + "target_model.pt")
-
-        with open(directory + "replay_buffer.pkl", "rb") as f:
-            self.replay_buffer = pickle.load(f)
+            for param, target_param in zip(self.model.parameters(), self.target_model.parameters()):
+                target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)

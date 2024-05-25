@@ -122,10 +122,6 @@ class DDPG(ValueBasedAgent):
             action = self.scale_action(action, Box(-1, 1, (self.action_size,)))
         return action
 
-    def learn_interaction(self, *interaction_data):
-        assert not self.under_test
-        self.replay_buffer.append(interaction_data)
-
     def get_value(self, observations, actions=None):
         with torch.no_grad():
             if actions is None:
