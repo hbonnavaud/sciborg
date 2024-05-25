@@ -1,0 +1,6 @@
+venv
+experiments
+*output*
+*test*
+.idea
+*pycache*
