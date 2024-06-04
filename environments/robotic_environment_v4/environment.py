@@ -10,9 +10,11 @@ from matplotlib import pyplot as plt
 import math
 
 from skimage.draw import line_aa
+
 from .launch_gazebo import launch_gazebo
 import numpy as np
 from gym.spaces import Box
+from std_srvs.srv import Empty
 from .simulations_assets.build_world_from_map import generate_xml
 from sciborg.environments.goal_conditioned_environment import GoalConditionedEnvironment
 import rclpy
@@ -20,7 +22,6 @@ from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Odometry
 from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Pose, Point
-
 from gazebo_msgs.srv import SetEntityState
 from rclpy.qos import QoSProfile
 from sciborg.utils import quaternion_to_euler
@@ -46,7 +47,7 @@ class RobotMapsIndex(Enum):
     VOLIERE = "voliere"
 
 
-class SingleRobotEnvironmentV2(GoalConditionedEnvironment):
+class SingleRobotEnvironmentV4(GoalConditionedEnvironment):
 
     def __init__(self,
                  # simulation parameters

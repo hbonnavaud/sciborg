@@ -3,6 +3,10 @@ from .goal_conditioned_environment import GoalConditionedEnvironment
 import importlib
 from .. import settings
 
+from .robotic_environment_v2 import *
+from .robotic_environment_v3 import *
+from .robotic_environment_v4 import *
+
 # For every environment module, we use try except statements in case one environment have unmeet dependencies but the
 # user wants to use the others.
 # For an example, it allows you to import GridWorld without having mujoco or vizdoom installed.
@@ -41,4 +45,3 @@ try:
 except Exception as e:
     if not settings.supress_import_warnings:
         print(f"Warning: module 'robotic_environment' cannot be imported due to the following error: ", e, sep="")
-        
