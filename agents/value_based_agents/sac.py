@@ -5,12 +5,12 @@ import torch
 from gym.spaces import Box
 from torch.nn import ReLU, Tanh
 from torch.nn.functional import normalize
-from ..utils.nn import MLP
 from .value_based_agent import ValueBasedAgent
 from torch import optim
 from torch.nn import functional
 from torch.distributions.normal import Normal
 from typing import Union
+from ..utils import NeuralNetwork
 
 
 class SAC(ValueBasedAgent):
@@ -60,7 +60,7 @@ class SAC(ValueBasedAgent):
         self.min_std = -20
         self.max_std = 2
 
-        self.actor = MLP(self.observation_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
+        self.actor = NeuralNetwork(self.observation_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
                          2 * self.nb_actions, Tanh(), learning_rate=self.actor_lr, optimizer_class=optim.Adam,
                          device=self.device).float()
         self.target_actor = copy.deepcopy(self.actor)
@@ -71,13 +71,6 @@ class SAC(ValueBasedAgent):
         self.target_critic = copy.deepcopy(self.critic)
 
         self.passed_logs = []
-
-    def set_device(self, device):
-        self.device = device
-        self.actor.to(device)
-        self.target_actor.to(device)
-        self.critic.to(device)
-        self.target_critic.to(device)
 
     def get_q_value(self, observation):
         with torch.no_grad():

@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Union
+from typing import Union, Type
 import numpy as np
 import torch
 from torch import optim, nn
@@ -35,9 +35,10 @@ class TD3(ValueBasedAgent):
                  actor_lr: float = 0.000025,
                  critic_lr: float = 0.00025,
 
-                 optimizer=None,
-                 actor_optimizer=optim.Adam,
-                 critic_optimizer=optim.Adam,
+                 # N.B.: Type[torch.optim.Optimizer] mean that the argument should be a subclass of optim.Optimizer
+                 optimizer: Union[None, Type[torch.optim.Optimizer]] = None,
+                 actor_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
+                 critic_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
                  ):
         """
         Args:
@@ -112,15 +113,6 @@ class TD3(ValueBasedAgent):
         self.action_noise = torch.distributions.normal.Normal(
             torch.zeros(self.action_size), torch.full((self.action_size,), self.exploration_noise_std))
 
-    def set_device(self, device):
-        self.device = device
-        self.actor.to(device)
-        self.target_actor.to(device)
-        self.critic_1.to(device)
-        self.target_critic_1.to(device)
-        self.critic_2.to(device)
-        self.target_critic_2.to(device)
-
     def action(self, observation, explore=True):
         with torch.no_grad():
             observation = torch.tensor(observation, dtype=torch.float).to(self.device)
@@ -156,7 +148,7 @@ class TD3(ValueBasedAgent):
 
     def learn(self):
         assert not self.under_test
-        if self.training_steps_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
+        if self.train_interactions_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
             states, actions, rewards, new_states, dones = self.replay_buffer.sample(self.batch_size)
 
             with (torch.no_grad()):
@@ -180,7 +172,7 @@ class TD3(ValueBasedAgent):
             critic_loss.backward()
             self.critic_optimizer.step()
 
-            if self.training_steps_done % self.policy_update_frequency == 0:
+            if self.train_interactions_done % self.policy_update_frequency == 0:
                 actions = self.actor(states)
                 actions = self.scale_action(actions, Box(-1, 1, (self.action_size,)))
                 actor_loss = - self.critic_1(torch.concat((states, actions), dim=-1))

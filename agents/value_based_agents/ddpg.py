@@ -1,5 +1,5 @@
 from copy import deepcopy
-from typing import Union
+from typing import Union, Type
 import numpy as np
 import torch
 from torch import optim, nn
@@ -8,6 +8,17 @@ from gym.spaces import Box
 from ..utils import ReplayBuffer, NeuralNetwork
 from .value_based_agent import ValueBasedAgent
 
+
+class Critic(nn.Module):
+    def __init__(self, observation_size: int, action_size: int, layer_1_size: int, layer_2_size: int):
+        super().__init__()
+        self.fc1 = nn.Linear(self.observation_size + self.action_size, layer_1_size)
+        self.fc2 = nn.Linear(layer_1_size, layer_2_size)
+        self.fc3 = nn.Linear(layer_2_size, 1)
+
+    def forward(self, observation: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
+
+        self.fc1
 
 class DDPG(ValueBasedAgent):
     name = "DDPG"
@@ -33,9 +44,10 @@ class DDPG(ValueBasedAgent):
                  actor_lr: float = 0.000025,
                  critic_lr: float = 0.00025,
 
-                 optimiser: optim.Optimizer = Union[None, torch.optim.Optimizer],
-                 actor_optimiser: optim.Optimizer = optim.Adam,
-                 critic_optimiser: optim.Optimizer = optim.Adam,
+                 # N.B.: Type[torch.optim.Optimizer] mean that the argument should be a subclass of optim.Optimizer
+                 optimizer: Union[None, Type[torch.optim.Optimizer]] = None,
+                 actor_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
+                 critic_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
                  ):
         """
         Args:
@@ -53,11 +65,11 @@ class DDPG(ValueBasedAgent):
                 'actor_lr' and 'critic_lr' hyperparameters.
             actor_lr: Actor learning rate. Overwritten by 'learning_rate' if it is set.
             critic_lr: Critic learning rate. Overwritten by 'learning_rate' if it is set.
-            optimiser: Actor and Critic optimiser. Must be an instance of torch.optim.Optimiser. If set, this value
-                overwrite both 'actor_optimiser' and 'critic_optimiser' hyperparameters.
-            actor_optimiser: Actor optimiser. Must be an instance of torch.optim.Optimiser. Overwritten by optimiser
+            optimizer: Actor and Critic optimizer. Must be an instance of torch.optim.Optimizer. If set, this value
+                overwrite both 'actor_optimizer' and 'critic_optimizer' hyperparameters.
+            actor_optimizer: Actor optimizer. Must be an instance of torch.optim.Optimizer. Overwritten by optimizer
                 if set.
-            critic_optimiser: Critic optimiser. Must be an instance of torch.optim.Optimiser. Overwritten by optimiser
+            critic_optimizer: Critic optimizer. Must be an instance of torch.optim.Optimizer. Overwritten by optimizer
                 if set.
         """
 
@@ -83,7 +95,7 @@ class DDPG(ValueBasedAgent):
             device=self.device,
             tau=critic_tau if tau is None else tau,
             learning_rate=critic_lr if learning_rate is None else learning_rate,
-            optimizer_class=critic_optimiser if optimiser is None else optimiser,
+            optimizer_class=critic_optimizer if optimizer is None else optimizer,
         )
         self.target_critic = deepcopy(self.critic)
 
@@ -96,19 +108,12 @@ class DDPG(ValueBasedAgent):
             device=self.device,
             tau=actor_tau if tau is None else tau,
             learning_rate=actor_lr if learning_rate is None else learning_rate,
-            optimizer_class=actor_optimiser if optimiser is None else optimiser
+            optimizer_class=actor_optimizer if optimizer is None else optimizer
         )
         self.target_actor = deepcopy(self.actor)
 
         self.action_noise = torch.distributions.normal.Normal(
             torch.zeros(self.action_size), torch.full((self.action_size,), self.exploration_noise_std))
-
-    def set_device(self, device):
-        self.device = device
-        self.actor.to(device)
-        self.critic.to(device)
-        self.target_actor.to(device)
-        self.target_critic.to(device)
 
     def action(self, observation, explore=True):
         with torch.no_grad():
@@ -141,7 +146,7 @@ class DDPG(ValueBasedAgent):
 
     def learn(self):
         assert not self.under_test
-        if self.training_steps_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
+        if self.train_interactions_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
             states, actions, rewards, new_states, dones = self.replay_buffer.sample(self.batch_size)
 
             with torch.no_grad():

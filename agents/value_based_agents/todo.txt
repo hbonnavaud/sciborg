@@ -1,11 +1,11 @@
 
 
 Refactor:
- - DQN
- - C51
  - SAC
  - PPO
 
 Refactored:
+ - C51
+ - DQN
  - DDPG
  - TD3

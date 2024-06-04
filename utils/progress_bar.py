@@ -2,7 +2,7 @@ import time
 from datetime import datetime, timedelta
 from math import ceil, sqrt
 from random import random, randint
-from utils.ansi import Ansi
+from .ansi import Ansi
 
 
 class Loader:

@@ -23,9 +23,10 @@ class PointEnv(Environment):
         self.maze_map = np.array(importlib.import_module("sciborg.environments.point_maze.maps." + map_name).maze_array)
         self.height, self.width = self.maze_map.shape
         self.action_noise = action_noise
-        self.observation_space = spaces.Box(low=np.array([- self.width / 2, - self.height / 2]),
-                                      high=np.array([self.width / 2, self.height / 2]))
-        self.action_space = spaces.Box(low=np.array([-1.0, -1.0]), high=np.array([1.0, 1.0]), dtype=np.float32)
+        self.observation_space = spaces.Box(low=np.array([- self.width / 2, - self.height / 2]).astype(np.float32),
+                                            high=np.array([self.width / 2, self.height / 2]).astype(np.float32))
+        self.action_space = spaces.Box(low=np.array([-1.0, -1.0]).astype(np.float32),
+                                       high=np.array([1.0, 1.0]).astype(np.float32), dtype=np.float32)
         self.agent_observation = None
         self.reset()
 

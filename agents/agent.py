@@ -59,7 +59,7 @@ class Agent(ABC):
         self.last_observation = None  # Useful to store interaction when we receive (new_stare, reward, done) tuple
         self.episode_id = 0
         self.episode_time_step_id = 0
-        self.training_steps_done = 0
+        self.train_interactions_done = 0
         self.output_dir = None
         self.under_test = False
         self.episode_started = False
@@ -76,12 +76,19 @@ class Agent(ABC):
     def process_interaction(self, action, reward, new_observation, done, learn=True):
         self.episode_time_step_id += 1
         if learn and not self.under_test:
-            self.training_steps_done += 1
+            self.train_interactions_done += 1
         self.last_observation = new_observation
 
     def stop_episode(self):
         self.episode_id += 1
         self.episode_started = False
+
+    def set_device(self, device):
+        self.device = device
+
+        for attr, value in vars(self).items():
+            if isinstance(value, torch.nn.Module):
+                self.__getattribute__(attr).to(self.device)
 
     def __deepcopy__(self, memo):
         cls = self.__class__
@@ -156,8 +163,4 @@ class Agent(ABC):
 
     @abstractmethod
     def action(self, observation, explore=True):
-        pass
-
-    @abstractmethod
-    def set_device(self, device):
         pass

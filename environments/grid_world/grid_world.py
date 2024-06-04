@@ -33,7 +33,7 @@ class GridWorld(Environment):
         grid_world_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         sys.path.insert(0, grid_world_path)
         self.map_name = map_name
-        self.maze_map = np.array(importlib.import_module("sciborg.grid_world.maps." + self.map_name).maze_array)
+        self.maze_map = np.array(importlib.import_module("sciborg.environments.grid_world.maps." + self.map_name).maze_array)
         self.height, self.width = self.maze_map.shape
         self.agent_coordinates = None
 

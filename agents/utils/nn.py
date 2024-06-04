@@ -1,102 +1,72 @@
 import numpy as np
 import torch
 from torch import nn, optim
-from torch.nn.modules import Module
-from torch.optim import Optimizer
+from typing import Type, Union
 
 
-class NeuralNetwork(Module):
+class NeuralNetwork(nn.Module):
     """
     A general MLP class. Initialisation example:
     mlp = MLP(input_size, 64, ReLU(), 64, ReLU(), output_size, Sigmoid())
     """
 
     def __init__(self,
-                 module: Module,
-                 device=None,
                  tau: float = 0.1,
                  learning_rate: float = 0.01,
-                 optimizer_class=optim.Adam):
+                 optimizer_class: Type[optim.Optimizer] = optim.Adam,
+                 module: Union[None, nn.Module] = None):
         """
-        For each element in layers_data:
-         - If the element is an integer, it will be replaced by a linear layer with this integer as output size,
-         - If this is a model (like activation layer) il will be directly integrated
-         - If it is a function, it will be used to initialise the weights of the layer before
-            So we call layer_data[n](layer_data[n - 1].weights) with n the index of the activation function in
-            layers_data
+        This class add some stuff to the torch.nn.Module class in order to make the manipulation of rl NNs more concise.
+        Args:
+            tau: Used when the weights of this nn converge to the weights of another given one (used when this nn is a
+                target network): self.weights = (1 - tau) * self.weights + tau * other_nn.weights
+            learning_rate: Learning rate of the optimiser.
+            optimizer_class: Class of the optimiser to use, an instance is created on self.__init__().
         """
         super().__init__()
-
-        if device is None:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        elif isinstance(device, str):
-            self.device = torch.device(device)
-        else:
-            self.device = device
-
-        self.module: Module = module
+        self.module = self if module is None else module
         self.tau = tau
-        self.device = device
         self.learning_rate = learning_rate
-        self.optimizer = optimizer_class(params=self.parameters(), lr=learning_rate)
-        assert isinstance(self.optimizer, Optimizer)
-        self.to(self.device)
+        assert issubclass(optimizer_class, optim.Optimizer)
+        self.optimizer = optimizer_class(params=self.module.parameters(), lr=self.learning_rate)
 
-    def forward(self, input_data):
+    @property
+    def device(self):
+        return next(self.module.parameters()).data.device
+
+    @property
+    def dtype(self):
+        return next(self.module.parameters()).data.dtype
+
+    def format_input(self, input_data: Union[torch.Tensor, np.ndarray]):
         if isinstance(input_data, np.ndarray):
             input_data = torch.from_numpy(input_data).to(self.device)
-        else:
-            assert isinstance(input_data, torch.Tensor) and input_data.device == self.device
-        input_data = input_data.astype(self.module.dtype)
-        return self.module(input_data)
+        return input_data.to(self.dtype)
 
-    def converge_to(self, other_nn, tau=None):
+    def match(self, other_nn: nn.Module, tau: Union[int, float] = None):
         """
-        Make the weights of the current model be a bit closer to the given mlp.
+        Make the weights of the current model match the ones of the given mlp, with a ratio of tau.
         self.weights = (1 - tau) * self.weights + tau * other_mlp.weights
-        Precondition: other_mlp have the exact same shape of self.
+        Precondition: other_mlp's parameters have the exact same shape than self's ones.
+
+        Args:
+            other_nn: The other neural network to copy
+            tau: default=None, the copy ratio. If not set, self.tau is used.
         """
+
         tau = self.tau if tau is None else tau
-        assert isinstance(tau, float)
-        for self_param, other_param in zip(self.parameters(), other_nn.parameters()):
+        for self_param, other_param in zip(self.module.parameters(), other_nn.parameters()):
             self_param.data.copy_(
                 self_param.data * (1.0 - tau) + other_param.data * tau
             )
 
-    def learn(self, loss, retain_graph=False):
+    def learn(self, loss: torch.Tensor, retain_graph: bool = False):
+        """
+        Backward the given loss on this module's weights.
+        Args:
+            loss: The loss to back-propagate.
+            retain_graph: Whether the gradient graph should be retained or not.
+        """
         self.optimizer.zero_grad()
         loss.backward(retain_graph=retain_graph)
         self.optimizer.step()
-
-
-class MLP(NeuralNetwork):
-    """
-    A general MLP class. Initialisation example:
-    mlp = MLP(input_size, 64, ReLU(), 64, ReLU(), output_size, Sigmoid())
-    """
-
-    def __init__(self, input_size, *layers_data, device, tau=0.1, learning_rate=0.01,
-                 optimizer_class=optim.Adam):
-        """
-        For each element in layers_data:
-         - If the element is an integer, it will be replaced by a linear layer with this integer as output size,
-         - If this is a model (like activation layer) il will be directly integrated
-         - If it is a function, it will be used to initialise the weights of the layer before
-            So we call layer_data[n](layer_data[n - 1].weights) with n the index of the activation function in
-            layers_data
-        """
-
-        layers = nn.ModuleList()
-        self.input_size = input_size  # Can be useful later ...
-        for data in layers_data:
-            layer = data
-            if isinstance(data, int):
-                layer = nn.Linear(input_size, data)
-                input_size = data
-            if callable(data) and not isinstance(data, nn.Module):
-                data(self.layers[-1].weight)
-                continue
-            layers.append(layer)  # For the next layer
-        layers = nn.Sequential(*layers)
-
-        super().__init__(layers, device=device, tau=tau, learning_rate=learning_rate, optimizer_class=optimizer_class)
