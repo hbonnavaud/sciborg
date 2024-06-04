@@ -11,13 +11,12 @@ import math
 
 from skimage.draw import line_aa
 
-from ..launch_gz_client import launch_gzclient
-from environments.robotic_environment_v2.launch_gazebo import launch_gazebo
+from .launch_gazebo import launch_gazebo
 import numpy as np
 from gym.spaces import Discrete, Box
 from std_srvs.srv import Empty
-from environments.robotic_environment_v2.simulations_assets.build_world_from_map import generate_xml
-from environments.goal_conditioned_environment import GoalConditionedEnvironment
+from .simulations_assets.build_world_from_map import generate_xml
+from sciborg.environments.goal_conditioned_environment import GoalConditionedEnvironment
 import rclpy
 from rclpy.qos import QoSReliabilityPolicy, QoSHistoryPolicy
 from nav_msgs.msg import Odometry
@@ -25,7 +24,7 @@ from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist, PoseStamped, Pose, Point
 from gazebo_msgs.srv import SetEntityState
 from rclpy.qos import QoSProfile
-from utils import quaternion_to_euler
+from sciborg.utils import quaternion_to_euler
 
 
 class ActionType(Enum):

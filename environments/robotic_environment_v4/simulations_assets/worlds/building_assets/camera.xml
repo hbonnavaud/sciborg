@@ -1,0 +1,7 @@
+<gui fullscreen='0'>
+  <camera name='user_camera'>
+    <pose>0 -10 7 0 0.7 0</pose>
+    <view_controller>orbit</view_controller>
+    <projection_type>perspective</projection_type>
+  </camera>
+</gui>
