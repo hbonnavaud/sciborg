@@ -1,6 +1,7 @@
 venv
 experiments
 *output*
+*venv*
 *test*
-.idea
 *pycache*
+.idea
