@@ -73,9 +73,9 @@ def load_walls(maze_array: Union[list, np.ndarray], scale: float, walls_width: f
             maze_array[row_from:row_to + 1, col_index] = 0
 
             # Add this wall to the memory
-            position_x = (horizontal_wall[1][1] + horizontal_wall[0][1] + 1) / 2 * scale
-            position_y = (horizontal_wall[1][0] + horizontal_wall[0][0] + 1) / 2 * scale
-            height = (horizontal_wall[1][0] - horizontal_wall[0][0] + 1) * scale
+            position_x = (vertical_wall[1][1] + vertical_wall[0][1] + 1) / 2 * scale
+            position_y = (vertical_wall[1][0] + vertical_wall[0][0] + 1) / 2 * scale
+            height = (vertical_wall[1][0] - vertical_wall[0][0] + 1) * scale
 
             obstacle = {
                 "name": "vertical_wall_" + str(vertical_wall_id),
