@@ -40,10 +40,10 @@ class HER(GoalConditionedWrapper):
         self.last_trajectory = []
         return super().start_episode(observation, goal, test_episode=test_episode)
 
-    def process_interaction(self, action, new_observation, reward, done, learn=True):
+    def process_interaction(self, action, next_observation, reward, done, learn=True):
         if learn and not self.under_test:
             self.last_trajectory.append((self.last_observation, action))
-        super().process_interaction(action, new_observation, reward, done, learn=learn)
+        super().process_interaction(action, next_observation, reward, done, learn=learn)
 
     def stop_episode(self):
         # Relabel last trajectory
@@ -52,21 +52,23 @@ class HER(GoalConditionedWrapper):
 
         # For each observation seen :
         for observation_index, (observation, action) in enumerate(self.last_trajectory[:-self.nb_resample_per_observations]):
-            new_observation_index = observation_index + 1
-            new_observation, _ = self.last_trajectory[new_observation_index]
+            next_observation_index = observation_index + 1
+            next_observation, _ = self.last_trajectory[next_observation_index]
 
             # sample four goals in future observations
             for relabelling_id in range(self.nb_resample_per_observations):
-                goal_index = randrange(new_observation_index, len(self.last_trajectory))
+                goal_index = randrange(next_observation_index, len(self.last_trajectory))
                 target_observation, _ = self.last_trajectory[goal_index]
                 goal = self.goal_from_observation_fun(target_observation)
 
                 features = self.get_features(observation, goal)
                 # Compute a reward that goes from -1, for the first observation of the fake trajectory, to 0, if the
-                # new_observation if the fake goal.
-                reward = (new_observation_index / goal_index) - 1
-                new_features = self.get_features(new_observation, goal)
+                # next_observation if the fake goal.
+                reward = (next_observation_index / goal_index) - 1
+                next_features = self.get_features(next_observation, goal)
 
-                done = goal_index == new_observation_index
-                self.reinforcement_learning_agent.save_interaction(features, action, reward, new_features, done)
+                done = goal_index == next_observation_index
+
+                (self.reinforcement_learning_agent.replay_buffer
+                 .append((features, action, reward, next_features, done)))
         super().stop_episode()

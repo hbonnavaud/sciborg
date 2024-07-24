@@ -19,11 +19,15 @@ class Agent(ABC):
 
     name = "Agent"
 
-    def __init__(self, observation_space: Union[Box, Discrete], action_space: Union[Box, Discrete], **params):
+    def __init__(self,
+                 observation_space: Union[Box, Discrete],
+                 action_space: Union[Box, Discrete],
+                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+                 ):
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.
-        @param params: Optional parameters.
+        @param device: agent's device.
         """
         assert isinstance(observation_space, Box) or isinstance(observation_space, Discrete), \
             "The observation space should be an instance of gym.spaces.Space"
@@ -39,7 +43,7 @@ class Agent(ABC):
         for ignored in ["self", "frame", "__class__"]:
             self.init_params.pop(ignored)
 
-        self.device = params.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
+        self.device = device
 
         # Observation info
         self.observation_space = observation_space

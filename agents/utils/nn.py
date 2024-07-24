@@ -12,8 +12,8 @@ class NeuralNetwork(nn.Module):
 
     def __init__(self,
                  tau: float = 0.1,
-                 learning_rate: float = 0.01,
-                 optimizer_class: Type[optim.Optimizer] = optim.Adam,
+                 # learning_rate: float = 0.01,
+                 # optimizer_class: Type[optim.Optimizer] = optim.Adam,
                  module: Union[None, nn.Module] = None):
         """
         This class add some stuff to the torch.nn.Module class in order to make the manipulation of rl NNs more concise.
@@ -26,9 +26,9 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         self.module = self if module is None else module
         self.tau = tau
-        self.learning_rate = learning_rate
-        assert issubclass(optimizer_class, optim.Optimizer)
-        self.optimizer = optimizer_class(params=self.module.parameters(), lr=self.learning_rate)
+        # self.learning_rate = learning_rate
+        # assert issubclass(optimizer_class, optim.Optimizer)
+        # self.optimizer = optimizer_class(params=self.module.parameters(), lr=self.learning_rate)
 
     @property
     def device(self):
@@ -60,13 +60,13 @@ class NeuralNetwork(nn.Module):
                 self_param.data * (1.0 - tau) + other_param.data * tau
             )
 
-    def learn(self, loss: torch.Tensor, retain_graph: bool = False):
-        """
-        Backward the given loss on this module's weights.
-        Args:
-            loss: The loss to back-propagate.
-            retain_graph: Whether the gradient graph should be retained or not.
-        """
-        self.optimizer.zero_grad()
-        loss.backward(retain_graph=retain_graph)
-        self.optimizer.step()
+    # def learn(self, loss: torch.Tensor, retain_graph: bool = False):
+    #     """
+    #     Backward the given loss on this module's weights.
+    #     Args:
+    #         loss: The loss to back-propagate.
+    #         retain_graph: Whether the gradient graph should be retained or not.
+    #     """
+    #     self.optimizer.zero_grad()
+    #     loss.backward(retain_graph=retain_graph)
+    #     self.optimizer.step()

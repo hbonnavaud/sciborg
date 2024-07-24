@@ -105,7 +105,7 @@ class MunchausenDQN(ValueBasedAgent):
 
                 # NEW
                 with torch.no_grad():
-                    target_q_values = self.target_model(next_observations)
+                    target_q_values = self.target_model(observations)
                     target_policy = soft_max(target_q_values, self.tau_soft)
                     target_next_q_values = self.target_model(next_observations)
                     target_next_policy = soft_max(target_next_q_values, self.tau_soft)

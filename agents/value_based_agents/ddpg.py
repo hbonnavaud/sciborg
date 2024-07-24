@@ -1,24 +1,15 @@
+import warnings
 from copy import deepcopy
 from typing import Union, Type
 import numpy as np
 import torch
 from torch import optim, nn
 from gym.spaces import Box
-
-from ..utils import ReplayBuffer, NeuralNetwork
+from ..utils import ReplayBuffer
 from .value_based_agent import ValueBasedAgent
+from ..utils.copy_weights import copy_weights
+import inspect
 
-
-class Critic(nn.Module):
-    def __init__(self, observation_size: int, action_size: int, layer_1_size: int, layer_2_size: int):
-        super().__init__()
-        self.fc1 = nn.Linear(self.observation_size + self.action_size, layer_1_size)
-        self.fc2 = nn.Linear(layer_1_size, layer_2_size)
-        self.fc3 = nn.Linear(layer_2_size, 1)
-
-    def forward(self, observation: torch.Tensor, action: torch.Tensor) -> torch.Tensor:
-
-        self.fc1
 
 class DDPG(ValueBasedAgent):
     name = "DDPG"
@@ -31,7 +22,7 @@ class DDPG(ValueBasedAgent):
                  policy_update_frequency: int = 2,
                  batch_size: int = 256,
                  replay_buffer_size: int = int(1e6),
-                 steps_before_learning: int = int(25e3),
+                 steps_before_learning: int = 1000,
 
                  layer1_size: int = 256,
                  layer2_size: int = 256,
@@ -47,7 +38,7 @@ class DDPG(ValueBasedAgent):
                  # N.B.: Type[torch.optim.Optimizer] mean that the argument should be a subclass of optim.Optimizer
                  optimizer: Union[None, Type[torch.optim.Optimizer]] = None,
                  actor_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
-                 critic_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
+                 critic_optimizer: Type[torch.optim.Optimizer] = optim.Adam
                  ):
         """
         Args:
@@ -87,33 +78,33 @@ class DDPG(ValueBasedAgent):
         self.batch_size = batch_size
 
         # Setup critic and its target
-        self.critic = NeuralNetwork(
-            module=nn.Sequential(
+        self.critic = nn.Sequential(
                 nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
                 nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-                nn.Linear(layer2_size, 1), nn.Tanh()),
-            device=self.device,
-            tau=critic_tau if tau is None else tau,
-            learning_rate=critic_lr if learning_rate is None else learning_rate,
-            optimizer_class=critic_optimizer if optimizer is None else optimizer,
-        )
+                nn.Linear(layer2_size, 1), nn.Tanh()
+        ).to(self.device)
+        critic_optimizer_class = optimizer if critic_optimizer is None else critic_optimizer
+        critic_lr = learning_rate if critic_lr is None else critic_lr
+        self.critic_optimizer = critic_optimizer_class(params=self.critic.parameters(), lr=critic_lr)
+        self.critic_tau = tau if critic_tau is None else critic_tau
         self.target_critic = deepcopy(self.critic)
 
         # Setup actor and its target
-        self.actor = NeuralNetwork(
-            module=nn.Sequential(
+        self.actor = nn.Sequential(
                 nn.Linear(self.observation_size, layer1_size), nn.ReLU(),
                 nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-                nn.Linear(layer2_size, self.action_size), nn.Tanh()),
-            device=self.device,
-            tau=actor_tau if tau is None else tau,
-            learning_rate=actor_lr if learning_rate is None else learning_rate,
-            optimizer_class=actor_optimizer if optimizer is None else optimizer
-        )
+                nn.Linear(layer2_size, self.action_size), nn.Tanh()
+        ).to(self.device)
+        actor_lr = learning_rate if actor_lr is None else actor_lr
+        actor_optimizer_class = optimizer if actor_optimizer is None else actor_optimizer
+        self.actor_optimizer = actor_optimizer_class(params=self.actor.parameters(), lr=actor_lr)
+        self.actor_tau = tau if actor_tau is None else actor_tau
         self.target_actor = deepcopy(self.actor)
 
         self.action_noise = torch.distributions.normal.Normal(
-            torch.zeros(self.action_size), torch.full((self.action_size,), self.exploration_noise_std))
+            torch.zeros(self.action_size).to(self.device),
+            torch.full((self.action_size,), self.exploration_noise_std).to(self.device)
+        )
 
     def action(self, observation, explore=True):
         with torch.no_grad():
@@ -156,14 +147,22 @@ class DDPG(ValueBasedAgent):
             critic_value = self.critic(torch.concat((states, actions), dim=-1))
             target = (rewards + self.gamma * (1 - dones) * critic_value_.squeeze()).view(self.batch_size, 1)
             critic_loss = torch.nn.functional.mse_loss(target, critic_value)
-            self.critic.learn(critic_loss)
+
+            self.critic_optimizer.zero_grad()
+            critic_loss.backward()
+            self.critic_optimizer.step()
 
             if self.learning_steps_done % self.policy_update_frequency == 0:
+                self.learning_steps_done = 0
                 actions = self.actor(states)
                 actions = self.scale_action(actions, Box(-1, 1, (self.action_size,)))
                 actor_loss = - self.critic(torch.concat((states, actions), dim=-1))
                 actor_loss = torch.mean(actor_loss)
-                self.actor.learn(actor_loss)
 
-                self.target_critic.converge_to(self.critic)
-                self.target_actor.converge_to(self.actor)
+                self.actor_optimizer.zero_grad()
+                actor_loss.backward()
+                self.actor_optimizer.step()
+
+                self.target_critic = copy_weights(self.target_critic, self.critic, self.critic_tau)
+                self.target_actor = copy_weights(self.target_actor, self.actor, self.actor_tau)
+            self.learning_steps_done += 1

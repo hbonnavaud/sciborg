@@ -40,12 +40,8 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
         self.init_params["goal_from_observation_fun"] = goal_from_observation_fun
 
         # Setup goal_from_observation_fun
-        self.goal_from_observation_fun = goal_from_observation_fun
-        if self.goal_from_observation_fun is None:
-            if len(goal_space.shape) > 1:
-                raise ValueError("Your goal space have a shape bigger than one. The default 'goal_from_observation_fun'"
-                                 " might not fit for you. Please set it in the __init__ arguments.")
-            self.goal_from_observation_fun = lambda observation: observation[..., :self.goal_space.shape[-1]]
+        if goal_from_observation_fun is not None:
+            self.goal_from_observation_fun = goal_from_observation_fun
 
         # Instantiate wrapped agent
         self.reinforcement_learning_agent_class = reinforcement_learning_agent_class
@@ -53,6 +49,9 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
             reinforcement_learning_agent_class(self.feature_space, action_space, **params))
 
         self.name = "Goal conditioned " + self.reinforcement_learning_agent.name
+
+    def goal_from_observation_fun(self, observation):
+        return observation[..., :self.goal_space.shape[-1]]
 
     def __getattr__(self, name):
         """Returns an attribute with ``name``, unless ``name`` starts with an underscore."""
