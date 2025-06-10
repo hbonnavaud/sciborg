@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from typing import Union
 
 import numpy as np
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 from ..rl_agent import RLAgent
 
 

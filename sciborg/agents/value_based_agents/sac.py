@@ -1,167 +1,242 @@
-# Goal conditioned deep Q-network
-import copy
+from copy import deepcopy
+from typing import Union, Type
+
 import numpy as np
 import torch
-from gym.spaces import Box
-from torch.nn import ReLU, Tanh
-from torch.nn.functional import normalize
+from torch import optim, nn
+from gymnasium.spaces import Box, Discrete
+
+from ..utils import ReplayBuffer
 from .value_based_agent import ValueBasedAgent
-from torch import optim
-from torch.nn import functional
-from torch.distributions.normal import Normal
-from typing import Union
-from ..utils import NeuralNetwork
+from ..utils.copy_weights import copy_weights
+
+
+class Actor(torch.nn.Module):
+    def __init__(self, observation_size: int, action_space: Union[Box, Discrete], layer_1_size: int, layer_2_size: int,
+                 device=torch.device("cuda")):
+        super().__init__()
+        self.dtype = torch.float32
+        self.device = device
+        self.fc1 = nn.Linear(observation_size, layer_1_size).to(self.dtype).to(self.device)
+        self.fc2 = nn.Linear(layer_1_size, layer_2_size).to(self.dtype).to(self.device)
+        self.fc_mean = nn.Linear(layer_2_size, np.prod(action_space.shape)).to(self.dtype).to(self.device)
+        self.fc_log_std = nn.Linear(layer_2_size, np.prod(action_space.shape)).to(self.dtype).to(self.device)
+        # action rescaling
+        self.register_buffer(
+            "action_scale", torch.tensor((action_space.high - action_space.low) / 2.0, dtype=torch.float32)
+        )
+        self.register_buffer(
+            "action_bias", torch.tensor((action_space.high + action_space.low) / 2.0, dtype=torch.float32)
+        )
+
+    def forward(self, x):
+        if isinstance(x, np.ndarray):
+            x = torch.from_numpy(x)
+        x = x.to(self.device).to(self.dtype)
+        x = nn.functional.relu(self.fc1(x))
+        x = nn.functional.relu(self.fc2(x))
+        mean = self.fc_mean(x)
+        log_std = torch.tanh(self.fc_log_std(x))
+        log_std_min = -5
+        log_std_max = 2
+        log_std = log_std_min + 0.5 * (log_std_max - log_std_min) * (log_std + 1)  # From SpinUp / Denis Yarats
+
+        return mean, log_std
+
+    def get_action(self, x):
+        mean, log_std = self(x)
+        std = log_std.exp()
+        normal = torch.distributions.Normal(mean, std)
+        x_t = normal.rsample()  # for reparameterization trick (mean + std * N(0,1))
+        y_t = torch.tanh(x_t)
+        action = y_t * self.action_scale + self.action_bias
+        log_prob = normal.log_prob(x_t)
+        # Enforcing Action Bound
+        log_prob -= torch.log(self.action_scale * (1 - y_t.pow(2)) + 1e-6)
+        log_prob = log_prob.sum(-1, keepdim=True)
+        mean = torch.tanh(mean) * self.action_scale + self.action_bias
+        return action, log_prob, mean
 
 
 class SAC(ValueBasedAgent):
+    name = "SAC_2"
 
-    name = "SAC"
-
-    def __init__(self, 
-                 observation_space, 
-                 action_space,
-                 actor_lr: float = 0.0005,
-                 critic_lr: float = 0.0005,
-                 alpha: Union[None, float] = None,
-                 critic_alpha: float = 0.6,
-                 actor_alpha: float = 0.05,
-                 nb_gradient_steps: int = 1,
-                 gamma: float = 0.99,
-                 tau: float = 0.005,
-                 layer1_size: int = 250,
-                 layer2_size: int = 150,
-                 reward_scale: int = 15,
-                 ):
+    def __init__(self, *args, **params):
         """
-        @param observation_space: Environment's observation space.
-        @param action_space: Environment's action_space.
-        @param params: Optional parameters.
+        Args:
+            observation_space: Agent's observations space.
+            action_space: Agent's actions space.
+            gamma: Value of gamma in the critic's target computation formulae.
+            layer1_size: Size of actor and critic first hidden layer.
+            layer2_size: Size of actor and critic second hidden layer.
+            tau: Tau for target critic and actor convergence to their non-target equivalent. If set, this value
+                overwrite both 'actor_tau' and 'critic_tau' hyperparameters.
+            learning_rate: Learning rate of actor and critic modules. If set, this value overwrite both
+                'actor_lr' and 'critic_lr' hyperparameters.
+            actor_lr: Actor learning rate. Overwritten by 'learning_rate' if it is set.
+            critic_lr: Critic learning rate. Overwritten by 'learning_rate' if it is set.
+            alpha: (float) entropy regularisation hyperparameter.
+            autotune_alpha: (bool) Whether to autotune alpha hyperparameter or not.
+            target_entropy_scale: (float) Scale of the alpha autotune.
+            alpha_lr: (float) Alpha autotune learning rate.
         """
 
-        super().__init__(observation_space, action_space)
-        self.actor_lr = actor_lr
-        self.critic_lr = critic_lr
-        alpha = alpha
-        self.critic_alpha = critic_alpha
-        self.actor_alpha = actor_alpha
-        self.nb_gradient_steps = nb_gradient_steps
-        if alpha is not None:
-            self.critic_alpha = alpha
-            self.actor_alpha = alpha
-        self.gamma = gamma
-        self.tau = tau
-        self.layer_1_size = layer1_size
-        self.layer_2_size = layer2_size
-        self.reward_scale = reward_scale
+        super().__init__(*args, **params)
+        
+        assert self.device is not None
+        # Gather parameters
+        self.gamma = params.get("gamma", 0.99)
+        self.exploration_noise_std = params.get("exploration_noise_std", 0.1)
+        self.target_action_noise_std = params.get("target_action_noise_std", 0.2)
+        self.target_action_max_noise = params.get("target_action_max_noise", 0.5)
+        self.policy_update_frequency = params.get("policy_update_frequency", 2)
+        self.batch_size = params.get("batch_size", 256)
+        self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
+        self.steps_before_learning = params.get("steps_before_learning", 1000)
+        self.target_network_frequency = params.get("target_network_frequency", 1)
+        self.layer1_size = params.get("layer1_size", 256)
+        self.layer2_size = params.get("layer2_size", 256)
+        self.tau = params.get("tau", 0.005)
+        self.learning_rate = params.get("learning_rate", None)
+        self.actor_lr = params.get("actor_lr", 3e-4)
+        self.critic_lr = params.get("critic_lr", 1e-3)
+        self.alpha_lr = params.get("alpha_lr", 0.00025)
+        self.alpha = params.get("alpha", 0.2)
+        self.autotune_alpha = params.get("autotune_alpha", True)
+        self.target_entropy_scale = params.get("target_entropy_scale", 0.89)
 
-        self.policy_update_frequency = 2
-        self.learning_step = 1
+        if self.learning_rate is not None:
+            self.critic_lr = self.learning_rate
+            self.actor_lr = self.learning_rate
+            self.alpha_lr = self.learning_rate
 
-        self.min_std = -20
-        self.max_std = 2
+        # Instantiate the class
+        self.learning_steps_done = 0
+        self.replay_buffer = ReplayBuffer(capacity=self.replay_buffer_size, device=self.device)
 
-        self.actor = NeuralNetwork(self.observation_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
-                         2 * self.nb_actions, Tanh(), learning_rate=self.actor_lr, optimizer_class=optim.Adam,
-                         device=self.device).float()
-        self.target_actor = copy.deepcopy(self.actor)
+        # Setup critic and its target
+        self.critic_1 = nn.Sequential(
+            nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
+            nn.Linear(layer1_size, layer2_size), nn.ReLU(),
+            nn.Linear(layer2_size, 1), nn.Tanh()
+        ).to(self.device)
 
-        self.critic = MLP(self.observation_size + self.nb_actions, self.layer_1_size, ReLU(),
-                          self.layer_2_size, ReLU(), 1, learning_rate=self.critic_lr, optimizer_class=optim.Adam,
-                          device=self.device).float()
-        self.target_critic = copy.deepcopy(self.critic)
+        self.critic_2 = nn.Sequential(
+            nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
+            nn.Linear(layer1_size, layer2_size), nn.ReLU(),
+            nn.Linear(layer2_size, 1)
+        ).to(self.device)
+        self.critic_optimizer = torch.optim.Adam(list(self.critic_1.parameters()) + list(self.critic_2.parameters()),
+                                                 lr=self.critic_lr, 
+                                                 eps=1e-4)
 
-        self.passed_logs = []
+        self.target_critic_1 = deepcopy(self.critic_1)
+        self.target_critic_2 = deepcopy(self.critic_2)
 
-    def get_q_value(self, observation):
-        with torch.no_grad():
-            observation = torch.from_numpy(observation).to(self.device) if isinstance(observation, np.ndarray) else observation
+        # Setup actor and its target
+        self.actor = Actor(
+            device=self.device,
+            observation_size=self.observation_size,
+            action_space=self.action_space,
+            layer_1_size=self.layer_1_size,
+            layer_2_size=self.layer_2_size,
+        ).to(self.device)
+        self.actor_optimizer = torch.optim.Adam(self.actor.parameters(), lr=self.actor_lr, eps=1e-4)
 
-            next_actions, _ = self.sample_action(observation, use_target_network=True)
-            critic_input = torch.concat((observation, next_actions), dim=-1)
-            q_values = self.target_critic.forward(critic_input).view(-1)
-        return q_values
+        self.action_noise = torch.distributions.normal.Normal(
+            torch.zeros(self.action_size).to(self.device),
+            torch.full((self.action_size,), self.exploration_noise_std).to(self.device)
+        )
 
-    def sample_action(self, actor_input, use_target_network=False, explore=True):
-        actor_network = self.target_actor if use_target_network else self.actor
-
-        if isinstance(actor_input, np.ndarray):
-            actor_input = torch.from_numpy(actor_input).to(self.device)
-        actor_input = normalize(actor_input, p=2., dim=-1)  # Tensor torch.float64
-
-        # Forward
-        actor_output = actor_network(actor_input)
-        if len(actor_input.shape) > 1:  # It's a batch
-            actions_means = actor_output[:, :self.nb_actions]
-            actions_log_stds = actor_output[:, self.nb_actions:]
-        else:
-            actions_means = actor_output[:self.nb_actions]
-            actions_log_stds = actor_output[self.nb_actions:]
-
-        if self.under_test or not explore:
-            return actions_means, None
-        else:
-            actions_log_stds = torch.clamp(actions_log_stds, min=self.min_std, max=self.max_std)
-            actions_stds = torch.exp(actions_log_stds)
-            actions_distribution = Normal(actions_means, actions_stds)
-
-            raw_actions = actions_distribution.rsample() if explore or self.under_test else actions_means
-
-            log_probs = actions_distribution.log_prob(raw_actions)
-            actions = torch.tanh(raw_actions)
-            log_probs -= torch.log(1 - actions.pow(2) + 1e-6)
-            log_probs = log_probs.sum(-1)
-            actions = self.scale_action(actions, Box(-1, 1, (self.nb_actions,)))
-
-            return actions, log_probs
+        if self.autotune_alpha:
+            self.target_entropy = - target_entropy_scale * torch.log(1 / torch.tensor(self.action_size))
+            self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
+            self.alpha = self.log_alpha.exp().item()
+            self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.alpha_lr, eps=1e-4)
 
     def action(self, observation, explore=True):
         with torch.no_grad():
-            action, _ = self.sample_action(observation, explore=explore)
-        return action.cpu().detach().numpy()
+            observation = torch.tensor(observation, dtype=torch.float).to(self.device)
+            action = self.actor.get_action(observation)[0].to(self.device)
+            if not self.under_test and explore:
+                action += self.action_noise.sample()
+            action = action.cpu().detach().numpy()
+
+            # Fit action to our action_space
+            action = self.scale_action(action, Box(-1, 1, (self.action_size,)))
+        return action
+
+    def learn_interaction(self, *interaction_data):
+        assert not self.under_test
+        self.replay_buffer.append(interaction_data)
 
     def get_value(self, observations, actions=None):
         with torch.no_grad():
             if actions is None:
-                actions, _ = self.sample_action(observations, explore=False)
-            elif isinstance(actions, np.ndarray):
-                actions = torch.tensor(actions)
+                actions = self.actor(observations)
             if isinstance(observations, np.ndarray):
-                observations = torch.tensor(observations)
-            critic_value = self.critic(torch.concat((observations, actions), dim=-1))
-        if len(critic_value.shape) > 1:
-            critic_value = critic_value.squeeze()
-        return critic_value.detach().numpy()
+                observations = torch.Tensor(observations)
+            if isinstance(actions, np.ndarray):
+                actions = torch.Tensor(actions)
+            critic_value = self.critic_1(torch.concat((observations, actions), dim=-1))
+        return critic_value.flatten().detach().numpy()
+
+    def process_interaction(self, action, reward, new_observation, done, learn=True):
+        if learn and not self.under_test:
+            self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
+            self.learn()
+        super().process_interaction(action, reward, new_observation, done, learn=learn)
 
     def learn(self):
-        if not self.under_test and len(self.replay_buffer) > self.batch_size:
-            for _ in range(self.nb_gradient_steps):
-                observations, actions, rewards, new_observations, done = self.replay_buffer.sample(self.batch_size)
+        assert not self.under_test
+        if self.train_interactions_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
+            observations, actions, rewards, next_observations, dones = self.replay_buffer.sample(self.batch_size)
 
-                # Training critic
-                with torch.no_grad():
-                    next_actions, next_log_probs = \
-                        self.sample_action(new_observations, use_target_network=True)
-                    critic_input = torch.concat((new_observations, next_actions), dim=-1)
-                    self.passed_logs.append(next_log_probs)
-                    next_q_values = \
-                        self.target_critic(critic_input).view(-1)
+            # CRITIC training
+            with torch.no_grad():
+                next_actions, next_log_pi, _ = self.actor.get_action(next_observations)
+                critic_1_next_value = self.target_critic_1(torch.cat((next_observations, next_actions), -1))
+                critic_2_next_value = self.target_critic_2(torch.cat((next_observations, next_actions), -1))
+                min_qf_next_target = torch.min(critic_1_next_value, critic_2_next_value) - self.alpha * next_log_pi
+                next_q_value = rewards.flatten() + (1 - dones.flatten()) * self.gamma * min_qf_next_target.view(-1)
 
-                q_hat = self.reward_scale * rewards + self.gamma * (1 - done) * \
-                    (next_q_values - self.critic_alpha * next_log_probs)
-                q_values = self.critic(torch.concat((observations, actions), dim=-1)).view(-1)
-                critic_loss = functional.mse_loss(q_values, q_hat)
-                self.critic.learn(critic_loss)
-                self.target_critic.converge_to(self.critic, tau=self.tau)
+            # use Q-values only for the taken actions
+            critic_1_value = self.critic_1(torch.cat((observations, actions), -1)).view(-1)
+            critic_2_value = self.critic_2(torch.cat((observations, actions), -1)).view(-1)
+            critic_1_loss = torch.nn.functional.mse_loss(critic_1_value, next_q_value)
+            critic_2_loss = torch.nn.functional.mse_loss(critic_2_value, next_q_value)
+            qf_loss = critic_1_loss + critic_2_loss
+            self.critic_optimizer.zero_grad()
+            qf_loss.backward()
+            self.critic_optimizer.step()
 
-                if self.learning_step % self.policy_update_frequency == 0:
-                    for _ in range(self.policy_update_frequency):
-                        # Train actor
-                        actions, log_probs = self.sample_action(observations)
-                        log_probs = log_probs.view(-1)
-                        critic_values = self.critic(torch.concat((observations, actions), dim=-1)).view(-1)
+            if self.learning_steps_done % self.policy_update_frequency == 0:
+                for _ in range(self.policy_update_frequency):
+                    # ACTOR TRAINING
+                    actions, log_actions, _ = self.actor.get_action(observations)
+                    critic_1_value = self.critic_1(torch.cat((observations, actions), -1))
+                    critic_2_value = self.critic_2(torch.cat((observations, actions), -1))
+                    min_critic_value = torch.min(critic_1_value, critic_2_value)
+                    actor_loss = ((self.alpha * log_actions) - min_critic_value).mean()
 
-                        actor_loss = self.actor_alpha * log_probs - critic_values
-                        actor_loss = torch.mean(actor_loss)
-                        self.actor.learn(actor_loss, retain_graph=True)
-                        self.target_actor.converge_to(self.actor, tau=self.tau)
-                self.learning_step += 1
+                    self.actor_optimizer.zero_grad()
+                    actor_loss.backward()
+                    self.actor_optimizer.step()
+
+                    # ALPHA AUTOTUNE
+                    if self.autotune_alpha:
+                        # re-use action probabilities for temperature loss
+                        with torch.no_grad():
+                            _, log_pi, _ = self.actor.get_action(observations)
+                        alpha_loss = (-self.log_alpha.exp() * (log_pi + self.target_entropy)).mean()
+                        alpha_loss = alpha_loss.mean()
+
+                        self.alpha_optimizer.zero_grad()
+                        alpha_loss.backward()
+                        self.alpha_optimizer.step()
+                        self.alpha = self.log_alpha.exp().item()
+
+            if self.learning_steps_done % self.target_network_frequency == 0:
+                self.target_critic_1 = copy_weights(self.target_critic_1, self.critic_1, self.tau)
+                self.target_critic_2 = copy_weights(self.target_critic_2, self.critic_2, self.tau)
+            self.learning_steps_done += 1

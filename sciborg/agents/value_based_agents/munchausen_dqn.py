@@ -21,40 +21,27 @@ class MunchausenDQN(ValueBasedAgent):
 
     name = "Munchausen_DQN"
 
-    def __init__(self, observation_space, action_space, **params):
-        """
-        @param observation_space: Environment's observation space.
-        @param action_space: Environment's action_space.
-        @param params: Optional parameters.
-        """
+    def __init__(self, *args, **params):
+        super().__init__(observation_space, action_space, device=device)
 
-        super().__init__(observation_space, action_space, **params)
-
+        # Gather parameters
         self.gamma = params.get("gamma", 0.95)
         self.layer_1_size = params.get("layer_1_size", 64)
         self.layer_2_size = params.get("layer_2_size", 64)
         self.model = params.get("model", None)
         self.tau_soft = params.get("tau_soft", 0.03)
-
-        #  NEW, goals will be stored inside the replay buffer. We need a specific one with enough place to do so
         self.learning_rate = params.get("learning_rate", 5e-4)
         self.steps_before_learn = params.get("steps_before_learn", 500)
-        self.steps_before_target_update = params.get("steps_before_target_update", 1)
-        self.steps_since_last_target_update = 0
+        self.steps_before_target_update = params.get("steps_before_target_update", 0)
         self.nb_gradient_steps = params.get("nb_gradient_steps", 1)
-
         self.tau = params.get("tau", 0.001)
-
         self.epsilon_tar = params.get("epsilon_tar", 1e-6)
-        """the epsilon term for numerical stability"""
         self.alpha = params.get("alpha", 0.9)
-        """the entropy regularization parameter"""
         self.l_0 = params.get("l_0", -1.0)
-        """the lower bound of the weighted log probability"""
+                 
 
+        # Instantiate the class
         self.total_steps = 0
-
-        # NEW, The input observation size is multiplied by two because we need to also take the goal as input
         if self.model is None:
             self.model = MLP(self.observation_size, self.layer_1_size, ReLU(), self.layer_2_size, ReLU(),
                              self.nb_actions, learning_rate=self.learning_rate, optimizer_class=optim.Adam,

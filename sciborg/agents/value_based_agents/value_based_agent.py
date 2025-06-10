@@ -4,13 +4,19 @@ import torch
 
 from ..rl_agent import RLAgent
 from abc import ABC, abstractmethod
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 from ..utils.replay_buffer import ReplayBuffer
 
 
 class ValueBasedAgent(RLAgent, ABC):
 
-    def __init__(self, observation_space: Union[Box, Discrete], action_space: Union[Box, Discrete], **params):
+    def __init__(
+                 self, 
+                 observation_space: Union[Box, Discrete], 
+                 action_space: Union[Box, Discrete],
+                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+                 **params
+                 ):
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.

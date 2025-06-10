@@ -4,9 +4,9 @@ import os.path
 import pickle
 from typing import Union
 import inspect
-import gymnasium
+import gymnasium as gym
 import numpy as np
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 import torch
 from abc import ABC, abstractmethod
 from ..utils import create_dir
@@ -22,8 +22,7 @@ class RLAgent(ABC):
     def __init__(self,
                  observation_space: Union[Box, Discrete],
                  action_space: Union[Box, Discrete],
-                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                 ):
+                 device=None):
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.
@@ -33,7 +32,13 @@ class RLAgent(ABC):
             "The observation space should be an instance of gym.spaces.Space"
         assert isinstance(action_space, (Box, Discrete)), \
             "The action space should be an instance of gym.spaces.Space"
-
+        if device is None:
+            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        else:
+            self.device = device
+        assert isinstance(self.device, torch.device)
+        
+        # assert isinstance
         # Get the init parameters
         self.init_params = {}
         frame = inspect.stack()[1][0]  # Fixed: should be stack()[1] not stack()[0]
@@ -44,7 +49,7 @@ class RLAgent(ABC):
         for ignored in ["self", "frame", "__class__"]:
             self.init_params.pop(ignored, None)  # Fixed: use pop with default
             # OLD: self.init_params.pop(ignored)
-        print("computed init params: ", self.init_paramss)
+        print("computed init params: ", self.init_params)
 
         self.device = device
 

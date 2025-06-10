@@ -3,7 +3,7 @@ from typing import Union, Type
 import numpy as np
 import torch
 from torch import optim, nn
-from gym.spaces import Box
+from gymnasium.spaces import Box
 
 from ..utils import ReplayBuffer, NeuralNetwork
 from .value_based_agent import ValueBasedAgent
@@ -12,34 +12,7 @@ from .value_based_agent import ValueBasedAgent
 class TD3(ValueBasedAgent):
     name = "TD3"
 
-    def __init__(self,
-                 observation_space,
-                 action_space,
-                 gamma: float = 0.99,
-                 exploration_noise_std: float = 0.1,
-                 target_action_noise_std: float = 0.2,
-                 target_action_max_noise: float = 0.5,
-                 policy_update_frequency: int = 2,
-                 batch_size: int = 256,
-                 replay_buffer_size: int = int(1e6),
-                 steps_before_learning: int = int(25e3),
-
-                 layer1_size: int = 256,
-                 layer2_size: int = 256,
-
-                 tau: Union[None, float] = None,
-                 actor_tau: float = 0.001,
-                 critic_tau: float = 0.001,
-
-                 learning_rate: Union[None, float] = None,
-                 actor_lr: float = 0.000025,
-                 critic_lr: float = 0.00025,
-
-                 # N.B.: Type[torch.optim.Optimizer] mean that the argument should be a subclass of optim.Optimizer
-                 optimizer: Union[None, Type[torch.optim.Optimizer]] = None,
-                 actor_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
-                 critic_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
-                 ):
+    def __init__(self, *args, **params):
         """
         Args:
             observation_space: Agent's observations space.
@@ -62,21 +35,36 @@ class TD3(ValueBasedAgent):
             critic_optimizer: Critic optimizer. Must be an instance of torch.optim.Optimizer. Overwritten by optimizer
                 if set.
         """
+        super().__init__(*args, **params)
 
-        super().__init__(observation_space, action_space)
+        # Gather parameters
+        self.gamma = params.get("gamma", 0.99)
+        self.exploration_noise_std = params.get("exploration_noise_std", 0.1)
+        self.target_action_noise_std = params.get("target_action_noise_std", 0.2)
+        self.target_action_max_noise = params.get("target_action_max_noise", 0.5)
+        self.policy_update_frequency = params.get("policy_update_frequency", 2)
+        self.batch_size = params.get("batch_size", 256)
+        self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
+        self.steps_before_learning = params.get("steps_before_learning", int(25e3))
+        self.layer1_size = params.get("layer1_size", 256)
+        self.layer2_size = params.get("layer2_size", 256)
+        self.tau = params.get("tau", None)
+        self.actor_tau = params.get("actor_tau", 0.001)
+        self.critic_tau = params.get("critic_tau", 0.001)
+        self.learning_rate = params.get("learning_rate", None)
+        self.actor_lr = params.get("actor_lr", 0.000025)
+        self.critic_lr = params.get("critic_lr", 0.00025)
+        self.optimizer = params.get("optimizer", None)
+        self.actor_optimizer = params.get("actor_optimizer", optim.Adam)
+        self.critic_optimizer = params.get("critic_optimizer", optim.Adam)
+        
+        if self.tau is not None:
+            self.critic_tau = self.tau
+            self.actor_tau = self.tau
 
-        self.gamma = gamma
-        self.steps_before_learning = steps_before_learning
-        self.layer_1_size = layer1_size
-        self.layer_2_size = layer2_size
-        self.exploration_noise_std = exploration_noise_std
-        self.target_action_noise_std = target_action_noise_std
-        self.target_action_max_noise = target_action_max_noise
-        self.policy_update_frequency = policy_update_frequency
+        # Instantiate the class
         self.learning_steps_done = 0
-
         self.replay_buffer = ReplayBuffer(replay_buffer_size, self.device)
-        self.batch_size = batch_size
 
         # Setup critic and its target
         self.critic_1 = nn.Sequential(
@@ -95,7 +83,6 @@ class TD3(ValueBasedAgent):
         assert issubclass(optimizer, optim.Optimizer), "The optimizer should be a subclass of torch.optim.Optimizer"
         self.critic_optimizer = optimizer(list(self.critic_1.parameters()) + list(self.critic_2.parameters()),
                                           lr=critic_lr if learning_rate is None else learning_rate)
-        self.critic_tau = critic_tau if tau is None else tau
 
         # Setup actor and its target
         self.actor = NeuralNetwork(

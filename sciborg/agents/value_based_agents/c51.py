@@ -9,8 +9,16 @@ from ..utils import ReplayBuffer
 
 
 class QNetwork(nn.Module):
-    def __init__(self, observation_size, nb_actions, layer_1_size: int = 120, layer_2_size: int = 84,
-                 nb_atoms: int = 101, q_value_min: float = -100, q_value_max: float = 100):
+    def __init__(self, 
+                 observation_size, 
+                 nb_actions, 
+                 layer_1_size: int = 120, 
+                 layer_2_size: int = 84,
+                 nb_atoms: int = 101, 
+                 q_value_min: float = -100, 
+                 q_value_max: float = 100,
+                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+                 ):
         super().__init__()
         self.nb_atoms = nb_atoms
         self.register_buffer("atoms", torch.linspace(q_value_min, q_value_max, steps=nb_atoms))
@@ -40,63 +48,36 @@ class C51(ValueBasedAgent):
 
     name = "C51"
 
-    def __init__(self, 
-                 observation_space, 
-                 action_space,
-                 batch_size: int = 256,
-                 replay_buffer_size: int = int(1e6),
-                 steps_before_learning: int = 10000,
-                 learning_frequency: int = 10,
-                 nb_gradient_steps: int = 1,
-                 gamma: float = 0.95,
+    def __init__(self, *args, **params):
+        super().__init__(*args, **params)
 
-                 layer_1_size: int = 120,
-                 layer_2_size: int = 84,
+        # Gather parameters
+        self.batch_size = params.get("batch_size", 256)
+        self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
+        self.steps_before_learning = params.get("steps_before_learning", 10000)
+        self.learning_frequency = params.get("learning_frequency", 10)
+        self.nb_gradient_steps = params.get("nb_gradient_steps", 1)
+        self.gamma = params.get("gamma", 0.95)
+        self.layer_1_size = params.get("layer_1_size", 120)
+        self.layer_2_size = params.get("layer_2_size", 84)
+        self.initial_epsilon = params.get("initial_epsilon", 1)
+        self.final_epsilon = params.get("final_epsilon", 0.05)
+        self.steps_before_epsilon_decay = params.get("steps_before_epsilon_decay", 20)
+        self.epsilon_decay_period = params.get("epsilon_decay_period", 1000)
+        self.nb_atoms = params.get("nb_atoms", 101)
+        self.q_value_min = params.get("q_value_min", -100)
+        self.q_value_max = params.get("q_value_max", 100)
+        self.model = params.get("model", None)
+        self.optimizer = params.get("optimizer", optim.Adam)
+        self.learning_rate = params.get("learning_rate", 0.01)
+        self.tau = params.get("tau", 2.5e-4)
 
-                 initial_epsilon: float = 1,
-                 final_epsilon: float = 0.05,
-                 steps_before_epsilon_decay: int = 20,
-                 epsilon_decay_period: int = 1000,
-
-                 nb_atoms: int = 101,
-                 q_value_min: float = -100,
-                 q_value_max: float = 100,
-
-                 model: Union[None, torch.nn.Module] = None,
-                 optimizer=optim.Adam,
-                 learning_rate: float = 0.01,
-                 tau: float = 2.5e-4
-                 ):
-
-        super().__init__(observation_space, action_space)
-
-        self.batch_size = batch_size
-        self.steps_before_learning = steps_before_learning
-        self.learning_frequency = learning_frequency
-        self.nb_gradient_steps = nb_gradient_steps
-        self.gamma = gamma
-        self.replay_buffer = ReplayBuffer(replay_buffer_size, self.device)
-
-        self.layer_1_size = layer_1_size
-        self.layer_2_size = layer_2_size
-
-        self.initial_epsilon = initial_epsilon
-        self.final_epsilon = final_epsilon
-        self.steps_before_epsilon_decay = steps_before_epsilon_decay
+        # Instantiate the class
+        self.replay_buffer = ReplayBuffer(self.replay_buffer_size, self.device)
         self.epsilon = None
-        self.epsilon_decay_period = epsilon_decay_period
-
-        self.nb_atoms = nb_atoms
-        self.q_value_min = q_value_min
-        self.q_value_max = q_value_max
-
-        self.learning_rate = learning_rate
-        self.tau = tau
-
         self.epsilon_step = (self.initial_epsilon - self.final_epsilon) / self.epsilon_decay_period
         self.total_steps = 0
 
-        # NEW, The input observation size is multiplied by two because we need to also take the goal as input
         if model is None:
             self.model = QNetwork(self.observation_size, self.action_space.n,
                                   layer_1_size=self.layer_1_size, layer_2_size=self.layer_2_size,

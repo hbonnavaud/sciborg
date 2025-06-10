@@ -3,7 +3,7 @@ from random import randrange
 from typing import Union
 
 import numpy as np
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 
 from .goal_conditioned_wrapper import GoalConditionedWrapper
 from ..value_based_agents.value_based_agent import ValueBasedAgent

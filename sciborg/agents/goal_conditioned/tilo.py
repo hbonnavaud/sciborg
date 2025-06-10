@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Union
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 from ..goal_conditioned.her import HER
 
 

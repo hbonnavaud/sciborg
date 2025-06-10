@@ -1,6 +1,6 @@
 from sciborg.agents.rlagent import Agent
 from typing import Union
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 import torch
 import numpy as np
 
@@ -119,60 +119,39 @@ class Model(torch.nn.Module):
 
 
 class PpoDiscreteAgent(Agent):
-    def __init__(self,
-                 observation_space: Union[Box, Discrete],
-                 action_space: Union[Box, Discrete],
+    def __init__(self, *args, **params):
+        super().__init__(*args, **params)
 
-                 model: torch.nn.Module = None,
-                 layer_1_size=256,
-                 layer2_size=256,
-                 layer3_size=256,
+        # Gather parameters
+        self.model = params.get("model", None)
+        self.layer_1_size = params.get("layer_1_size", 256)
+        self.layer2_size = params.get("layer2_size", 256)
+        self.layer3_size = params.get("layer3_size", 256)
+        self.learning_rate = params.get("learning_rate", 2.5e-4)
+        self.anneal_lr = params.get("anneal_lr", False)
+        self.gamma = params.get("gamma", 0.99)
+        self.gae_lambda = params.get("gae_lambda", 0.95)
+        self.update_epochs = params.get("update_epochs", 4)
+        self.use_normalisation_advantage = params.get("use_normalisation_advantage", True)
+        self.clip_coefficient = params.get("clip_coefficient", 0.1)
+        self.clip_value_function_loss = params.get("clip_value_function_loss", True)
+        self.entropy_coefficient = params.get("entropy_coefficient", 0.01)
+        self.value_function_coefficient = params.get("value_function_coefficient", 0.5)
+        self.max_grad_norm = params.get("max_grad_norm", 0.5)
+        self.target_kl = params.get("target_kl", None)
+        self.min_buffer_size = params.get("min_buffer_size", 1000)
+        self.num_mini_batches = params.get("num_mini_batches", 4)
 
-                 learning_rate: float = 2.5e-4,  # the learning rate of the optimizer"""
-                 anneal_lr: bool = False,  # Toggle learning rate annealing for policy and value networks"""
-                 gamma: float = 0.99,  # the discount factor gamma"""
-                 gae_lambda: float = 0.95,  # the lambda for the general advantage estimation"""
-                 update_epochs: int = 4,  # the K epochs to update the policy"""
-                 use_normalisation_advantage: bool = True,  # Toggles advantages normalization"""
-                 clip_coefficient: float = 0.1,  # the surrogate clipping coefficient"""
-                 clip_value_function_loss: bool = True,  # Toggles whether to use a clipped loss for the value function, as per the paper."""
-                 entropy_coefficient: float = 0.01,  # coefficient of the entropy"""
-                 value_function_coefficient: float = 0.5,  # coefficient of the value function"""
-                 max_grad_norm: float = 0.5,  # the maximum norm for the gradient clipping"""
-                 target_kl: float = None,  # the target KL divergence threshold"""
-
-                 # to be filled in runtime
-                 min_buffer_size: int = 1000,  # the batch size (computed in runtime)"""
-                 num_mini_batches: int = 4,  # the number of mini-batches"""
-
-                 ):
-        super().__init__(observation_space, action_space)
-
-        self.model = model
+        # Instantiate the class
         if self.model is None:
             self.model = Model(self.observation_size, self.nb_actions, self.device,
-                               layer_1_size, layer2_size, layer3_size)
+                               self.layer_1_size, self.layer2_size, self.layer3_size)
         else:
             mandatory_functions = ["get_action", "get_value", "get_action_and_value"]
             for function_name in mandatory_functions:
                 assert hasattr(model, function_name) and callable(getattr(model, function_name)), (
                     "The model given to discrete ppo have no function called {}, which is mandatory."
                     .format(function_name))
-
-        self.learning_rate = learning_rate
-        self.anneal_lr = anneal_lr
-        self.gamma = gamma
-        self.gae_lambda = gae_lambda
-        self.nb_mini_batches = num_mini_batches
-        self.update_epochs = update_epochs
-        self.use_normalisation_advantage = use_normalisation_advantage
-        self.clip_coefficient = clip_coefficient
-        self.clip_value_function_loss = clip_value_function_loss
-        self.entropy_coefficient = entropy_coefficient
-        self.value_function_coefficient = value_function_coefficient
-        self.max_grad_norm = max_grad_norm
-        self.target_kl = target_kl
-        self.buffer_size = min_buffer_size
 
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=self.learning_rate, eps=1e-5)
 

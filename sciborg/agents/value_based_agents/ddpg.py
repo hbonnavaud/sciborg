@@ -4,7 +4,7 @@ from typing import Union, Type
 import numpy as np
 import torch
 from torch import optim, nn
-from gym.spaces import Box
+from gymnasium.spaces import Box
 from ..utils import ReplayBuffer
 from .value_based_agent import ValueBasedAgent
 from ..utils.copy_weights import copy_weights
@@ -14,32 +14,7 @@ import inspect
 class DDPG(ValueBasedAgent):
     name = "DDPG"
 
-    def __init__(self,
-                 observation_space,
-                 action_space,
-                 gamma: float = 0.99,
-                 exploration_noise_std: float = 0.1,
-                 policy_update_frequency: int = 2,
-                 batch_size: int = 256,
-                 replay_buffer_size: int = int(1e6),
-                 steps_before_learning: int = 1000,
-
-                 layer1_size: int = 256,
-                 layer2_size: int = 256,
-
-                 tau: Union[None, float] = None,
-                 actor_tau: float = 0.001,
-                 critic_tau: float = 0.001,
-
-                 learning_rate: Union[None, float] = None,
-                 actor_lr: float = 0.000025,
-                 critic_lr: float = 0.00025,
-
-                 # N.B.: Type[torch.optim.Optimizer] mean that the argument should be a subclass of optim.Optimizer
-                 optimizer: Union[None, Type[torch.optim.Optimizer]] = None,
-                 actor_optimizer: Type[torch.optim.Optimizer] = optim.Adam,
-                 critic_optimizer: Type[torch.optim.Optimizer] = optim.Adam
-                 ):
+    def __init__(self, *args, **params):
         """
         Args:
             observation_space: Agent's observations space.
@@ -63,30 +38,49 @@ class DDPG(ValueBasedAgent):
             critic_optimizer: Critic optimizer. Must be an instance of torch.optim.Optimizer. Overwritten by optimizer
                 if set.
         """
+        super().__init__(*args, **params)
 
-        super().__init__(observation_space, action_space)
+        # Gather parameters
+        self.gamma = params.get("gamma", 0.99)
+        self.exploration_noise_std = params.get("exploration_noise_std", 0.1)
+        self.policy_update_frequency = params.get("policy_update_frequency", 2)
+        self.batch_size = params.get("batch_size", 256)
+        self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
+        self.steps_before_learning = params.get("steps_before_learning", 1000)
+        self.layer1_size = params.get("layer1_size", 256)
+        self.layer2_size = params.get("layer2_size", 256)
+        self.tau = params.get("tau", None)
+        self.critic_tau = params.get("critic_tau", 0.001)
+        self.actor_tau = params.get("actor_tau", 0.001)
+        self.learning_rate = params.get("learning_rate", None)
+        self.critic_lr = params.get("critic_lr", 0.00025)
+        self.actor_lr = params.get("actor_lr", 0.000025)
+        self.optimizer = params.get("optimizer", None)
+        self.critic_optimizer = params.get("critic_optimizer", optim.Adam)
+        self.actor_optimizer = params.get("actor_optimizer", optim.Adam)
 
-        self.gamma = gamma
-        self.steps_before_learning = steps_before_learning
-        self.layer_1_size = layer1_size
-        self.layer_2_size = layer2_size
-        self.exploration_noise_std = exploration_noise_std
-        self.policy_update_frequency = policy_update_frequency
+        if self.tau is not None:
+            self.critic_tau = self.tau
+            self.actor_tau = self.tau
+
+        if self.learning_rate is not None:
+            self.critic_lr = self.learning_rate
+            self.actor_lr = self.learning_rate
+            
+        if self.optimiser is not None:
+            self.critic_optimizer = self.optimiser
+            self.actor_optimizer = self.optimiser
+
+        # Instantiate the class
         self.learning_steps_done = 0
-
         self.replay_buffer = ReplayBuffer(replay_buffer_size, self.device)
-        self.batch_size = batch_size
-
         # Setup critic and its target
         self.critic = nn.Sequential(
                 nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
                 nn.Linear(layer1_size, layer2_size), nn.ReLU(),
                 nn.Linear(layer2_size, 1), nn.Tanh()
         ).to(self.device)
-        critic_optimizer_class = optimizer if critic_optimizer is None else critic_optimizer
-        critic_lr = learning_rate if critic_lr is None else critic_lr
-        self.critic_optimizer = critic_optimizer_class(params=self.critic.parameters(), lr=critic_lr)
-        self.critic_tau = tau if critic_tau is None else critic_tau
+        self.critic_optimizer = self.critic_optimizer(params=self.critic.parameters(), lr=self.critic_lr)
         self.target_critic = deepcopy(self.critic)
 
         # Setup actor and its target
@@ -95,10 +89,7 @@ class DDPG(ValueBasedAgent):
                 nn.Linear(layer1_size, layer2_size), nn.ReLU(),
                 nn.Linear(layer2_size, self.action_size), nn.Tanh()
         ).to(self.device)
-        actor_lr = learning_rate if actor_lr is None else actor_lr
-        actor_optimizer_class = optimizer if actor_optimizer is None else actor_optimizer
-        self.actor_optimizer = actor_optimizer_class(params=self.actor.parameters(), lr=actor_lr)
-        self.actor_tau = tau if actor_tau is None else actor_tau
+        self.actor_optimizer = self.actor_optimizer(params=self.actor.parameters(), lr=self.actor_lr)
         self.target_actor = deepcopy(self.actor)
 
         self.action_noise = torch.distributions.normal.Normal(

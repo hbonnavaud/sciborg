@@ -4,7 +4,7 @@ import json
 import pickle
 import os
 import numpy as np
-from gym.spaces import Box, Discrete
+from gymnasium.spaces import Box, Discrete
 import torch
 
 from ..goal_conditioned.goal_conditioned_agent import GoalConditionedAgent
