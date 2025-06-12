@@ -14,7 +14,9 @@ from .general import (euler_to_quaternion,
                       are_euler_angles_equivalent,
                       get_dict_as_str,
                       get_point_image_after_rotation,
-                      print_replace_above)
+                      print_replace_above,
+                      one_hot,
+                      multi_dimentional_one_hot)
 from .progress_bar import ProgressBar, Loader
 from .drawing import *
 from .spaces import *

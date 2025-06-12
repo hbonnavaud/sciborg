@@ -22,7 +22,7 @@ class RLAgent(ABC):
     def __init__(self,
                  observation_space: Union[Box, Discrete],
                  action_space: Union[Box, Discrete],
-                 device=None):
+                 **params):
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.
@@ -32,10 +32,8 @@ class RLAgent(ABC):
             "The observation space should be an instance of gym.spaces.Space"
         assert isinstance(action_space, (Box, Discrete)), \
             "The action space should be an instance of gym.spaces.Space"
-        if device is None:
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        else:
-            self.device = device
+        
+        self.device = params.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         assert isinstance(self.device, torch.device)
         
         # assert isinstance
@@ -50,8 +48,6 @@ class RLAgent(ABC):
             self.init_params.pop(ignored, None)  # Fixed: use pop with default
             # OLD: self.init_params.pop(ignored)
         print("computed init params: ", self.init_params)
-
-        self.device = device
 
         # Observation info
         self.observation_space = observation_space

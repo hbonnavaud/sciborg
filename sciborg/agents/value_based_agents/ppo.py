@@ -119,6 +119,9 @@ class Model(torch.nn.Module):
 
 
 class PpoDiscreteAgent(Agent):
+    NAME="PPO"
+    OBSERVATION_SPACE_TYPE=Discrete
+    
     def __init__(self, *args, **params):
         super().__init__(*args, **params)
 

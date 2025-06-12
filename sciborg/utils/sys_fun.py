@@ -3,6 +3,7 @@ import shutil
 import cv2
 import numpy as np
 from PIL import Image
+import inspect
 
 
 def empty_dir(directory_path: str, send_to_trash=True):
@@ -98,22 +99,43 @@ def generate_video(images, output_directory: str, filename, convert_to_bgr=True)
 
 
 def save_image(image: np.ndarray, output_directory: str, file_name: str, extension: str = "png"):
-    directory_path = os.path.abspath(output_directory)
+    if output_directory[0] != "/":
+        # Get the frame of the caller to compute the absolute path from a relative one.
+        caller_frame = inspect.currentframe()
+        try:
+            # Go up one level to get the caller's frame
+            caller_frame = caller_frame.f_back
+            if caller_frame is None:
+                raise ValueError("Unable to determine the caller's directory.")
+
+            # Get the absolute path of the caller's file
+            caller_file = caller_frame.f_globals.get('__file__')
+            if not caller_file:
+                raise ValueError("Unable to determine the caller's directory.")
+
+            # Get the directory containing the caller's script
+            caller_directory = os.path.dirname(os.path.abspath(caller_file))
+
+            # Create the full path
+            directory_path = os.path.join(caller_directory, output_directory)
+        finally:
+            # Ensure the frame is properly cleaned up to avoid reference cycles
+            del caller_frame
+    else:
+        directory_path = os.path.abspath(output_directory)
     directory_path += os.path.sep
 
-    if output_directory[-1] != os.sep:
-        output_directory += os.sep
-    if not os.path.isdir(output_directory):
-        print("directory ", output_directory, " not found", sep="")
-        raise FileNotFoundError("Directory ", output_directory, " not found. Hint: directory without \"/\" at the beginning "
+    if not os.path.isdir(directory_path):
+        print("directory ", directory_path, " not found", sep="")
+        raise FileNotFoundError("Directory ", directory_path, " not found. Hint: directory without \"/\" at the beginning "
                                 "will be considered as relative path. Add \"/\" at the beginning if your path is "
                                 "absolute, and remove it if its not.")
     image = image.astype(np.uint8)
     image = Image.fromarray(image)
-    create_dir(output_directory)
+    create_dir(directory_path)
     if not file_name.endswith("." + extension):
         if len(file_name.split(".")) > 1:
             file_name = "".join(file_name.split(".")[:-1])  # Remove the last extension
         assert len(file_name.split(".")) == 1
         file_name += "." + extension
-    image.save(output_directory + file_name)
+    image.save(directory_path + file_name)

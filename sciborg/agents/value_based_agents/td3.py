@@ -10,7 +10,8 @@ from .value_based_agent import ValueBasedAgent
 
 
 class TD3(ValueBasedAgent):
-    name = "TD3"
+    NAME = "TD3"
+    OBSERVATION_SPACE_TYPE=Box
 
     def __init__(self, *args, **params):
         """
@@ -18,8 +19,8 @@ class TD3(ValueBasedAgent):
             observation_space: Agent's observations space.
             action_space: Agent's actions space.
             gamma: Value of gamma in the critic's target computation formulae.
-            layer1_size: Size of actor and critic first hidden layer.
-            layer2_size: Size of actor and critic second hidden layer.
+            layer_1_size: Size of actor and critic first hidden layer.
+            layer_2_size: Size of actor and critic second hidden layer.
             tau: Tau for target critic and actor convergence to their non-target equivalent. If set, this value
                 overwrite both 'actor_tau' and 'critic_tau' hyperparameters.
             actor_tau:
@@ -45,65 +46,94 @@ class TD3(ValueBasedAgent):
         self.policy_update_frequency = params.get("policy_update_frequency", 2)
         self.batch_size = params.get("batch_size", 256)
         self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
-        self.steps_before_learning = params.get("steps_before_learning", int(25e3))
-        self.layer1_size = params.get("layer1_size", 256)
-        self.layer2_size = params.get("layer2_size", 256)
+        self.steps_before_learning = params.get("steps_before_learning", 0)
+        self.layer_1_size = params.get("layer_1_size", 256)
+        self.layer_2_size = params.get("layer_2_size", 256)
         self.tau = params.get("tau", None)
         self.actor_tau = params.get("actor_tau", 0.001)
         self.critic_tau = params.get("critic_tau", 0.001)
         self.learning_rate = params.get("learning_rate", None)
         self.actor_lr = params.get("actor_lr", 0.000025)
         self.critic_lr = params.get("critic_lr", 0.00025)
-        self.optimizer = params.get("optimizer", None)
-        self.actor_optimizer = params.get("actor_optimizer", optim.Adam)
-        self.critic_optimizer = params.get("critic_optimizer", optim.Adam)
+        self.optimizer_class = params.get("optimizer_class", None)
+        self.actor_optimizer_class = params.get("actor_optimizer_class", optim.Adam)
+        self.critic_optimizer_class = params.get("critic_optimizer_class", optim.Adam)
         
-        if self.tau is not None:
+        if self.optimizer_class:
+            assert issubclass(self.optimizer_class, optim.Optimizer), "The optimizer should be a subclass of torch.optim.Optimizer"
+            self.critic_optimizer_class = self.optimizer_class
+            self.actor_optimizer_class = self.optimizer_class
+        else:
+            assert issubclass(self.critic_optimizer_class, optim.Optimizer), "The critic optimizer should be a subclass of torch.optim.Optimizer"
+            assert issubclass(self.actor_optimizer_class, optim.Optimizer), "The actor optimizer should be a subclass of torch.optim.Optimizer"
+
+        if self.learning_rate:
+            assert isinstance(self.learning_rate, float)
+            self.critic_lr = self.learning_rate
+            self.actor_lr = self.learning_rate
+        else:
+            assert isinstance(self.critic_lr, float)
+            assert isinstance(self.actor_lr, float)
+
+        if self.tau:
+            assert isinstance(self.tau, float)
             self.critic_tau = self.tau
             self.actor_tau = self.tau
+        else:
+            assert isinstance(self.critic_tau, float)
+            assert isinstance(self.actor_tau, float)
 
         # Instantiate the class
         self.learning_steps_done = 0
-        self.replay_buffer = ReplayBuffer(replay_buffer_size, self.device)
+        self.replay_buffer = ReplayBuffer(self.replay_buffer_size, self.device)
 
         # Setup critic and its target
         self.critic_1 = nn.Sequential(
-                nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
-                nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-                nn.Linear(layer2_size, 1), nn.Tanh())
+                nn.Linear(self.observation_size + self.action_size, self.layer_1_size), nn.ReLU(),
+                nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
+                nn.Linear(self.layer_2_size, 1), nn.Tanh()).to(self.device)
         self.target_critic_1 = deepcopy(self.critic_1)
 
         self.critic_2 = nn.Sequential(
-                nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
-                nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-                nn.Linear(layer2_size, 1), nn.Tanh())
+                nn.Linear(self.observation_size + self.action_size, self.layer_1_size), nn.ReLU(),
+                nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
+                nn.Linear(self.layer_2_size, 1), nn.Tanh()).to(self.device)
         self.target_critic_2 = deepcopy(self.critic_2)
 
-        optimizer = critic_optimizer if optimizer is None else optimizer
-        assert issubclass(optimizer, optim.Optimizer), "The optimizer should be a subclass of torch.optim.Optimizer"
-        self.critic_optimizer = optimizer(list(self.critic_1.parameters()) + list(self.critic_2.parameters()),
-                                          lr=critic_lr if learning_rate is None else learning_rate)
+        self.critic_optimizer = self.critic_optimizer_class(
+            list(self.critic_1.parameters()) + list(self.critic_2.parameters()),
+            lr=self.critic_lr
+        )
 
         # Setup actor and its target
-        self.actor = NeuralNetwork(
-            module=nn.Sequential(
-                nn.Linear(self.observation_size, layer1_size), nn.ReLU(),
-                nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-                nn.Linear(layer2_size, self.action_size), nn.Tanh()),
-            device=self.device,
-            tau=actor_tau if tau is None else tau,
-            learning_rate=actor_lr if learning_rate is None else learning_rate,
-            optimizer_class=actor_optimizer if optimizer is None else optimizer
-        )
+        # self.actor = NeuralNetwork(
+        #     module=nn.Sequential(
+        #         nn.Linear(self.observation_size, self.layer_1_size), nn.ReLU(),
+        #         nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
+        #         nn.Linear(self.layer_2_size, self.action_size), nn.Tanh()),
+        #     device=self.device,
+        #     tau=self.actor_tau,
+        #     learning_rate=self.actor_lr,
+        #     optimizer_class=self.actor_optimizer_class
+        # )
+
+        self.actor = nn.Sequential(
+                nn.Linear(self.observation_size, self.layer_1_size), nn.ReLU(),
+                nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
+                nn.Linear(self.layer_2_size, self.action_size), nn.Tanh()
+        ).to(self.device)
+        self.actor_optimizer = self.actor_optimizer_class(params=self.actor.parameters(), lr=self.actor_lr)
         self.target_actor = deepcopy(self.actor)
 
         self.action_noise = torch.distributions.normal.Normal(
-            torch.zeros(self.action_size), torch.full((self.action_size,), self.exploration_noise_std))
+            torch.zeros(self.action_size).to(self.device), 
+            torch.full((self.action_size,), self.exploration_noise_std).to(self.device)
+        )
 
     def action(self, observation, explore=True):
         with torch.no_grad():
             observation = torch.tensor(observation, dtype=torch.float).to(self.device)
-            action = self.actor(observation).to(self.device)
+            action = self.actor(observation)
             if not self.under_test and explore:
                 action += self.action_noise.sample()
             action = action.cpu().detach().numpy()
@@ -164,9 +194,13 @@ class TD3(ValueBasedAgent):
                 actions = self.scale_action(actions, Box(-1, 1, (self.action_size,)))
                 actor_loss = - self.critic_1(torch.concat((states, actions), dim=-1))
                 actor_loss = torch.mean(actor_loss)
-                self.actor.learn(actor_loss)
 
-                self.target_actor.converge_to(self.actor)
+                self.actor_optimizer.zero_grad()
+                actor_loss.backward()
+                self.actor_optimizer.step()
+
+                for param, target_param in zip(self.actor.parameters(), self.target_actor.parameters()):
+                    target_param.data.copy_(self.actor_tau * param.data + (1 - self.actor_tau) * target_param.data)
                 for param, target_param in zip(self.critic_1.parameters(), self.target_critic_1.parameters()):
                     target_param.data.copy_(self.critic_tau * param.data + (1 - self.critic_tau) * target_param.data)
                 for param, target_param in zip(self.critic_2.parameters(), self.target_critic_2.parameters()):

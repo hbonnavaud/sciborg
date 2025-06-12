@@ -1,11 +1,13 @@
-import copy
-from typing import Union
-import numpy as np
-import torch
-from torch import optim, nn
-from torch.nn import functional
+# Goal conditioned deep Q-network
+import pickle
 from .value_based_agent import ValueBasedAgent
 from ..utils import ReplayBuffer
+import copy
+import numpy as np
+import torch
+from .value_based_agent import ValueBasedAgent
+from ..utils import ReplayBuffer
+from gymnasium.spaces import Discrete
 
 
 class DQN(ValueBasedAgent):
@@ -14,7 +16,8 @@ class DQN(ValueBasedAgent):
     This Q-Function is used to find the best action to execute in a given observation.
     """
 
-    name = "DQN"
+    NAME = "DQN"
+    OBSERVATION_SPACE_TYPE=Discrete
 
     def __init__(self, *args, **params):
         super().__init__(*args, **params)
@@ -33,29 +36,27 @@ class DQN(ValueBasedAgent):
         self.steps_before_epsilon_decay = params.get("steps_before_epsilon_decay", 20)
         self.epsilon_decay_period = params.get("epsilon_decay_period", 1000)
         self.model = params.get("model", None)
-        self.optimizer = params.get("optimizer", optim.Adam)
-        self.criterion = params.get("criterion", functional.mse_loss)
-        self.learning_rate = params.get("learning_rate", 0.01)
-        self.tau = params.get("tau", 2.5e-4)
+        self.optimizer_class = params.get("optimizer_class", torch.optim.Adam)
+        self.criterion = params.get("criterion", torch.nn.functional.mse_loss)
+        self.learning_rate = params.get("learning_rate", 0.001)
+        self.tau = params.get("tau", 0.0003)
+
+        assert issubclass(self.optimizer_class, torch.optim.Optimizer)
 
         # Instantiate the class
-        self.replay_buffer = ReplayBuffer(replay_buffer_size, self.device)
+        self.replay_buffer = ReplayBuffer(self.replay_buffer_size, self.device)
         self.epsilon = None
         self.epsilon_step = (self.initial_epsilon - self.final_epsilon) / self.epsilon_decay_period
         self.total_steps = 0
-        if model is None:
-            self.model = nn.Sequential(
-                nn.Linear(self.observation_size, layer_1_size),
-                nn.ReLU(),
-                nn.Linear(layer_1_size, layer_2_size),
-                nn.ReLU(),
-                nn.Linear(layer_2_size, self.action_space.n)
-            )
+        if self.model is None:
+            self.model = torch.nn.Sequential(
+                torch.nn.Linear(self.observation_size, self.layer_1_size), torch.nn.ReLU(),
+                torch.nn.Linear(self.layer_1_size, self.layer_2_size), torch.nn.ReLU(),
+                torch.nn.Linear(self.layer_2_size, self.action_size)
+            ).to(self.device)
         else:
-            assert isinstance(model, torch.nn.Module)
-            self.model = model
-        assert issubclass(optimizer, optim.Optimizer)
-        self.optimizer = optimizer(self.model.parameters(), lr=self.learning_rate)
+            assert isinstance(self.model, torch.nn.Module)
+        self.optimizer = self.optimizer_class(self.model.parameters(), lr=self.learning_rate)
         self.target_model = copy.deepcopy(self.model)
 
     def get_value(self, observations, actions=None):
@@ -97,3 +98,8 @@ class DQN(ValueBasedAgent):
 
             for param, target_param in zip(self.model.parameters(), self.target_model.parameters()):
                 target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
+
+    def set_device(self, device):
+        super().set_device(device)
+        self.model.to(device)
+        self.target_model.to(device)

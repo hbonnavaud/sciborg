@@ -12,7 +12,8 @@ import inspect
 
 
 class DDPG(ValueBasedAgent):
-    name = "DDPG"
+    NAME = "DDPG"
+    OBSERVATION_SPACE_TYPE=Box
 
     def __init__(self, *args, **params):
         """

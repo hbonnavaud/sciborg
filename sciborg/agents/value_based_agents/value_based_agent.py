@@ -10,19 +10,13 @@ from ..utils.replay_buffer import ReplayBuffer
 
 class ValueBasedAgent(RLAgent, ABC):
 
-    def __init__(
-                 self, 
-                 observation_space: Union[Box, Discrete], 
-                 action_space: Union[Box, Discrete],
-                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-                 **params
-                 ):
+    def __init__(self, *args, **params): 
         """
         @param observation_space: Environment's observation space.
         @param action_space: Environment's action_space.
         @param params: Optional parameters.
         """
-        super().__init__(observation_space, action_space, **params)
+        super().__init__(*args, **params)
 
     def scale_action(self, actions: Union[np.ndarray, torch.Tensor], source_action_box: Box):
         """

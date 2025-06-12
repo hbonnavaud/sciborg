@@ -12,8 +12,8 @@ from abc import ABC, abstractmethod
 from collections import deque
 import random
 from ..rl_agent import RLAgent
-from ..value_based_agents import SAC
-
+from ..value_based_agents import SAC, MunchausenDQN, ValueBasedAgent
+from sciborg.utils import one_hot
 
 class Discriminator(torch.nn.Module):
     """Discriminator network that predicts skill from state"""
@@ -23,8 +23,8 @@ class Discriminator(torch.nn.Module):
         self.fc2 = torch.nn.Linear(hidden_dim, hidden_dim)
         self.fc3 = torch.nn.Linear(hidden_dim, nb_skill)
         
-    def forward(self, state):
-        x = torch.relu(self.fc1(state))
+    def forward(self, observation):
+        x = torch.relu(self.fc1(observation))
         x = torch.relu(self.fc2(x))
         return torch.log_softmax(self.fc3(x), dim=-1)
 
@@ -61,76 +61,51 @@ class DIAYN(RLAgent):
     
     name = "DIAYN"
     
-    def __init__(self,
-                 action_space,
-                 observation_space,
-                 agent_class: RLAgent = SAC,
-                 agent_kwargs: dict = {},
-                 nb_skill: int = 10,
-                 discriminator_lr: float = 3e-4,
-                 discriminator_update_freq: int = 1,
-                 buffer_size: int = 100000,
-                 batch_size: int = 256,
-                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
+    def __init__(self, *args, **params):
         """
-        @param agent_class: Class of the RL agent to wrap (must inherit from RLAgent)
-        @param agent_kwargs: Keyword arguments to pass to the agent constructor
-        @param nb_skill: Number of discrete skills to learn
+        @param nb_skills: Number of discrete skills to learn
         @param discriminator_lr: Learning rate for the discriminator
         @param discriminator_update_freq: How often to update discriminator (in interactions)
         @param buffer_size: Size of replay buffer for discriminator training
         @param batch_size: Batch size for discriminator updates
+        @param wrapped_agent_params: Keyword arguments to pass to the agent constructor
+        @param wrapped_agent_class: Class of the RL agent to wrap (must inherit from RLAgent)
         @param device: Device to run on
         """
-        
-        # Extract spaces from agent_kwargs for parent init
-        agent_kwargs['action_space'] = action_space
-        if 'observation_space' not in agent_kwargs.keys():
-            agent_kwargs['observation_space'] = observation_space
-        
-        # Create augmented observation space (original + skill)
-        if isinstance(observation_space, Box):
-            original_obs_dim = np.prod(observation_space.shape)
-            augmented_obs_shape = (original_obs_dim + nb_skill,)
-            augmented_obs_space = Box(
-                low=np.concatenate([observation_space.low.flatten(), np.zeros(nb_skill)]),
-                high=np.concatenate([observation_space.high.flatten(), np.ones(nb_skill)]),
-                shape=augmented_obs_shape,
-                dtype=observation_space.dtype
+        super().__init__(*args, **params)
+
+        self.nb_skills = params.get("nb_skills", 10)
+        self.discriminator_lr = params.get("discriminator_lr", 0.003)
+        self.discriminator_update_freq = params.get("discriminator_update_freq", 1)
+        self.buffer_size = params.get("buffer_size", 10000)
+        self.batch_size = params.get("batch_size", 125)
+        self.wrapped_agent_params= params.get("wrapped_agent_params", {})
+        self.wrapped_agent_class = params.get("wrapped_agent_class", SAC if isinstance(self.observation_space, Box) else MunchausenDQN)
+        assert issubclass(self.wrapped_agent_class, ValueBasedAgent)
+
+        # Compute the wrapped agent observation space
+        if isinstance(self.observation_space, Box):
+            aug_obs_space = Box(
+                low=np.concatenate([self.observation_space.low.flatten(), np.zeros(self.nb_skills)]),
+                high=np.concatenate([self.observation_space.high.flatten(), np.ones(self.nb_skills)]),
+                dtype=self.observation_space.dtype
             )
+        elif isinstance(self.observation_space, Discrete):
+            aug_obs_space = Discrete(self.observation_space.n + self.nb_skills)
         else:
-            raise NotImplementedError("DIAYN currently only supports Box observation spaces")
-        
-        # Initialize parent with augmented observation space
-        super().__init__(augmented_obs_space, action_space, device)
-        
-        # Store original spaces and parameters
-        self.original_observation_space = observation_space
-        self.nb_skill = nb_skill
-        self.discriminator_lr = discriminator_lr
-        self.discriminator_update_freq = discriminator_update_freq
-        self.batch_size = batch_size
-        
-        # Create wrapped agent with augmented observation space
-        wrapped_agent_kwargs = agent_kwargs.copy()
-        wrapped_agent_kwargs['observation_space'] = augmented_obs_space
-        wrapped_agent_kwargs['device'] = device
-        
-        self.wrapped_agent = agent_class(**wrapped_agent_kwargs)
-        
-        # Initialize discriminator
-        if isinstance(observation_space, Box):
-            state_dim = np.prod(observation_space.shape)
-        else:
-            state_dim = observation_space.n
-            
-        self.discriminator = Discriminator(state_dim, nb_skill).to(device)
+            raise NotImplementedError("DIAYN currently only supports Box and Discrete observation spaces")
+
+        # Force set some wrapped agent's params values
+        self.wrapped_agent_params["device"] = self.device  # Have to be on the same device
+        self.wrapped_agent = self.wrapped_agent_class(aug_obs_space, self.action_space, **self.wrapped_agent_params)
+
+        self.discriminator = Discriminator(self.observation_size, self.nb_skills).to(self.device)
         self.discriminator_optimizer = torch.optim.Adam(
-            self.discriminator.parameters(), lr=discriminator_lr
+            self.discriminator.parameters(), lr=self.discriminator_lr
         )
         
         # Replay buffer for discriminator training
-        self.replay_buffer = ReplayBuffer(buffer_size)
+        self.replay_buffer = ReplayBuffer(self.buffer_size)
         
         # Current skill and episode state
         self.current_skill = None
@@ -140,30 +115,30 @@ class DIAYN(RLAgent):
     def _sample_skill(self, forced_skill=None):
         """Sample a random skill"""
         assert forced_skill is None or isinstance(forced_skill, int)
-        skill_idx = forced_skill if forced_skill else np.random.randint(0, self.nb_skill)
-        skill_onehot = np.zeros(self.nb_skill)
+        skill_idx = forced_skill if forced_skill else np.random.randint(0, self.nb_skills)
+        skill_onehot = np.zeros(self.nb_skills)
         skill_onehot[skill_idx] = 1.0
         return skill_idx, skill_onehot
     
     def _augment_observation(self, observation):
         """Augment observation with current skill"""
-        if isinstance(self.original_observation_space, Box):
+        if isinstance(self.observation_space, Box):
             obs_flat = observation.flatten()
             return np.concatenate([obs_flat, self.current_skill_onehot])
         else:
-            raise NotImplementedError("Only Box observation spaces supported")
+            return np.concatenate([one_hot(observation, self.observation_space.n), self.current_skill_onehot])
     
-    def _compute_diayn_reward(self, next_state):
+    def _compute_diayn_reward(self, next_observation):
         """Compute DIAYN pseudo-reward: log q(z|s') - log p(z)"""
-        if isinstance(self.original_observation_space, Box):
-            state_tensor = torch.FloatTensor(next_state.flatten()).unsqueeze(0).to(self.device)
-        else:
-            state_tensor = torch.FloatTensor([next_state]).to(self.device)
+        if isinstance(self.observation_space, Box):
+            observation_tensor = torch.FloatTensor(next_observation.flatten()).unsqueeze(0).to(self.device)
+        elif isinstance(self.observation_space, Discrete):
+            observation_tensor = torch.FloatTensor([one_hot(next_observation, self.observation_size)]).to(self.device)
         
         with torch.no_grad():
-            log_probs = self.discriminator(state_tensor)
+            log_probs = self.discriminator(observation_tensor)
             # Reward is log q(z|s') - log p(z), where p(z) is uniform
-            reward = log_probs[0, self.current_skill].item() - np.log(1.0 / self.nb_skill)
+            reward = log_probs[0, self.current_skill].item() - np.log(1.0 / self.nb_skills)
         
         return reward
     
@@ -186,6 +161,8 @@ class DIAYN(RLAgent):
         self.discriminator_optimizer.zero_grad()
         loss.backward()
         self.discriminator_optimizer.step()
+
+        return loss
     
     def start_episode(self, observation, test_episode=False, forced_skill=None):
         """Start new episode with a new skill"""
@@ -212,27 +189,31 @@ class DIAYN(RLAgent):
             diayn_reward = self._compute_diayn_reward(new_observation)
             
             # Store state-skill pair for discriminator training
-            if isinstance(self.original_observation_space, Box):
+            if isinstance(self.observation_space, Box):
                 state_for_buffer = new_observation.flatten()
             else:
-                state_for_buffer = new_observation
+                state_for_buffer = one_hot(new_observation, self.observation_size)
             self.replay_buffer.push(state_for_buffer, self.current_skill)
             
             # Update discriminator periodically
             self.discriminator_update_counter += 1
             if self.discriminator_update_counter % self.discriminator_update_freq == 0:
-                self._update_discriminator()
+                discriminator_loss = self._update_discriminator()
         else:
-            diayn_reward = 0.0
+            diayn_reward = None
+            discriminator_loss = None
         
         # Pass DIAYN reward to wrapped agent instead of environment reward
         augmented_new_obs = self._augment_observation(new_observation)
-        self.wrapped_agent.process_interaction(
-            action, diayn_reward, augmented_new_obs, done, learn
-        )
+        if diayn_reward:
+            self.wrapped_agent.process_interaction(action, diayn_reward, augmented_new_obs, done, learn)
+        else:
+            self.wrapped_agent.process_interaction(action, 0.0, augmented_new_obs, done, learn=False)
         
         # Call parent process_interaction with original env reward for logging
         super().process_interaction(action, env_reward, new_observation, done, learn)
+
+        return diayn_reward, discriminator_loss
     
     def stop_episode(self):
         """Stop episode for both wrapper and wrapped agent"""
@@ -354,7 +335,6 @@ def demo_diayn():
     )
     
     print(f"Created DIAYN agent with {diayn_agent.nb_skill} skills")
-    print(f"Original observation space: {diayn_agent.original_observation_space}")
     print(f"Augmented observation space: {diayn_agent.observation_space}")
     
     # Train for a few episodes

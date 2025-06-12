@@ -1,8 +1,10 @@
-from sciborg import SAC, DIAYN
-from rlnav import PointMazeV0
+import gymnasium
+from sciborg import SAC, TD3, DIAYN, MunchausenDQN
+from rlnav import PointMazeV0, GridWorldV0
 from typing import Optional
 import numpy as np
 from sciborg.utils import save_image
+from statistics import mean
 
 
 skills_colors = [
@@ -34,14 +36,17 @@ def episode(
 
   assert forced_skill is None or isinstance(forced_skill, int)
   
-  observation = environment.reset()
+  observation, info = environment.reset()
   agent.start_episode(observation, forced_skill=forced_skill, test_episode=not learn)
   for interaction_id in range(nb_interactions):
     action = agent.action(observation)
-    new_observation, reward, done, info = environment.step(action)
-    agent.process_interaction(action, reward, new_observation, done)
+    new_observation, reward, terminated, truncated, info = environment.step(action)
+    agent.process_interaction(action, reward, new_observation, terminated)
     if render_image is not None:
-      environment.place_point(render_image, skills_colors[forced_skill], new_observation[:2], radius=1)
+        if isinstance(environment, GridWorldV0):
+            environment.set_tile_color(render_image, skills_colors[forced_skill], new_observation)
+        else:
+            environment.place_point(render_image, skills_colors[forced_skill], *new_observation[:2], radius=1)
   return render_image
 
 def render_skills(agent: DIAYN, environment: PointMazeV0):
@@ -53,21 +58,75 @@ def render_skills(agent: DIAYN, environment: PointMazeV0):
 
 if __name__ == "__main__":
 
-  # Initialisation
-  environment = PointMazeV0(goal_conditioned=False, action_noise=0.0)
-  agent = DIAYN(observation_space=environment.observation_space, 
-                action_space=environment.action_space, 
-                agent_class=SAC)
-  
-  # Training
-  for episode_id in range(1000):
-    observation = environment.reset()
-    agent.start_episode(observation)
-    for interaction_id in range(100):
-      action = agent.action(observation)
-      new_observation, reward, done, info = environment.step(action)
-      agent.process_interaction(action, reward, new_observation, done)
-  
-  # Verification
-  image = render_skills(agent, environment)
-  save_image(image, "outputs", "final_skills")
+
+    env = "grid_world"
+
+    # Initialisation
+    if env == "grid_world":
+
+        room_size = 50
+        maze_array = np.zeros((room_size, room_size))
+        maze_array[room_size // 2, room_size // 2] = 2
+        maze_array[0, :] = 1
+        maze_array[-1, :] = 1
+        maze_array[:, 0] = 1
+        maze_array[:, -1] = 1
+
+        environment = GridWorldV0(maze_array=maze_array, goal_conditioned=False, reset_anywhere=False)
+        wrapped_agent_class = MunchausenDQN
+    else:
+        environment = PointMazeV0(goal_conditioned=False, action_noise=0.0)
+        wrapped_agent_class = TD3
+
+    agent = DIAYN(observation_space=environment.observation_space,
+                action_space=environment.action_space,
+                wrapped_agent_class=wrapped_agent_class,
+                nb_skills=10)
+
+    # Training
+    steps_per_episodes = 100
+    mean_intrinsic_rewards = []
+    mean_discriminator_losses = []
+    for episode_id in range(5000):
+        intrinsic_reward_sum = 0
+        nb_rewards = 0
+        discriminator_loss_sum = 0
+        nb_discriminator_loss = 0
+        print(f"Episode {episode_id} ...", end="\r")
+        observation, info = environment.reset()
+        agent.start_episode(observation)
+        for interaction_id in range(steps_per_episodes):
+            print(f"Episode {episode_id} ... step {interaction_id} ({interaction_id / steps_per_episodes * 100}%).", end="\r")
+            action = agent.action(observation)
+            new_observation, reward, terminated, truncated, info = environment.step(action)
+            intrinsic_reward, discriminator_loss = agent.process_interaction(action, reward, new_observation, terminated)
+            if intrinsic_reward:
+                intrinsic_reward_sum += intrinsic_reward
+                nb_rewards += 1
+            if discriminator_loss:
+                discriminator_loss_sum += discriminator_loss
+                nb_discriminator_loss += 1
+        if nb_discriminator_loss > 0:
+            mean_reward = intrinsic_reward_sum / nb_rewards
+            mean_intrinsic_rewards.append(float(mean_reward))
+
+            mean_losses = discriminator_loss_sum / nb_discriminator_loss
+            mean_discriminator_losses.append(float(mean_losses))
+
+            if len(mean_intrinsic_rewards) >= 20:
+                print(f"Episode {episode_id} DONE. Average intrinsic reward = {mean_reward}, last 20: {mean(mean_intrinsic_rewards[-20:])}; "
+                      f"average discriminator loss = {mean_losses}, last 20: {mean(mean_discriminator_losses)}.")
+            else:
+                print(f"Episode {episode_id} DONE. Average intrinsic reward = {mean_reward}; "
+                      f"average discriminator loss = {mean_losses}.")
+        else:
+            print(f"Episode {episode_id} DONE.")
+
+        if episode_id % 500 == 0:
+            # Verification
+            image = render_skills(agent, environment)
+            save_image(image, "outputs", "Learned_skills_ep_" + str(episode_id))
+
+    # Verification
+    image = render_skills(agent, environment)
+    save_image(image, "outputs", "final_skills")

@@ -59,7 +59,8 @@ class Actor(torch.nn.Module):
 
 
 class SAC(ValueBasedAgent):
-    name = "SAC_2"
+    NAME = "SAC"
+    OBSERVATION_SPACE_TYPE=Box
 
     def __init__(self, *args, **params):
         """
@@ -67,8 +68,8 @@ class SAC(ValueBasedAgent):
             observation_space: Agent's observations space.
             action_space: Agent's actions space.
             gamma: Value of gamma in the critic's target computation formulae.
-            layer1_size: Size of actor and critic first hidden layer.
-            layer2_size: Size of actor and critic second hidden layer.
+            layer_1_size: Size of actor and critic first hidden layer.
+            layer_2_size: Size of actor and critic second hidden layer.
             tau: Tau for target critic and actor convergence to their non-target equivalent. If set, this value
                 overwrite both 'actor_tau' and 'critic_tau' hyperparameters.
             learning_rate: Learning rate of actor and critic modules. If set, this value overwrite both
@@ -92,10 +93,12 @@ class SAC(ValueBasedAgent):
         self.policy_update_frequency = params.get("policy_update_frequency", 2)
         self.batch_size = params.get("batch_size", 256)
         self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
-        self.steps_before_learning = params.get("steps_before_learning", 1000)
+        self.steps_before_learning = params.get("steps_before_learning", 0)
         self.target_network_frequency = params.get("target_network_frequency", 1)
-        self.layer1_size = params.get("layer1_size", 256)
-        self.layer2_size = params.get("layer2_size", 256)
+        self.layer_1_size = params.get("layer_1_size", 256)
+        self.layer_2_size = params.get("layer_2_size", 256)
+
+        print("DEBUG sac layer_1_size = ", self.layer_1_size)
         self.tau = params.get("tau", 0.005)
         self.learning_rate = params.get("learning_rate", None)
         self.actor_lr = params.get("actor_lr", 3e-4)
@@ -116,15 +119,15 @@ class SAC(ValueBasedAgent):
 
         # Setup critic and its target
         self.critic_1 = nn.Sequential(
-            nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
-            nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-            nn.Linear(layer2_size, 1), nn.Tanh()
+            nn.Linear(self.observation_size + self.action_size, self.layer_1_size), nn.ReLU(),
+            nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
+            nn.Linear(self.layer_2_size, 1), nn.Tanh()
         ).to(self.device)
 
         self.critic_2 = nn.Sequential(
-            nn.Linear(self.observation_size + self.action_size, layer1_size), nn.ReLU(),
-            nn.Linear(layer1_size, layer2_size), nn.ReLU(),
-            nn.Linear(layer2_size, 1)
+            nn.Linear(self.observation_size + self.action_size, self.layer_1_size), nn.ReLU(),
+            nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
+            nn.Linear(self.layer_2_size, 1)
         ).to(self.device)
         self.critic_optimizer = torch.optim.Adam(list(self.critic_1.parameters()) + list(self.critic_2.parameters()),
                                                  lr=self.critic_lr, 
@@ -149,7 +152,7 @@ class SAC(ValueBasedAgent):
         )
 
         if self.autotune_alpha:
-            self.target_entropy = - target_entropy_scale * torch.log(1 / torch.tensor(self.action_size))
+            self.target_entropy = - self.target_entropy_scale * torch.log(1 / torch.tensor(self.action_size))
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
             self.alpha = self.log_alpha.exp().item()
             self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.alpha_lr, eps=1e-4)

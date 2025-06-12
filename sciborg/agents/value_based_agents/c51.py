@@ -6,6 +6,7 @@ import torch
 from torch import optim, nn
 from .value_based_agent import ValueBasedAgent
 from ..utils import ReplayBuffer
+from gymnasium.spaces import Discrete
 
 
 class QNetwork(nn.Module):
@@ -46,7 +47,8 @@ class C51(ValueBasedAgent):
     This Q-Function is used to find the best action to execute in a given observation.
     """
 
-    name = "C51"
+    NAME = "C51"
+    OBSERVATION_SPACE_TYPE=Discrete
 
     def __init__(self, *args, **params):
         super().__init__(*args, **params)

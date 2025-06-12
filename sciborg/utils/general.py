@@ -144,3 +144,21 @@ def get_interpolation_average(xs: list, ys: list, result_low=0, result_high=100,
     mean = np.mean(data_collection, axis=0)
     std = np.std(data_collection, axis=0)
     return abscissas, mean, std
+
+
+def one_hot(values: np.ndarray, nb_digit: int):
+    one_hot = np.zeros((*values.shape, nb_digit), dtype=np.float32)
+    indices = np.indices(values.shape)
+    coords = [dim.ravel() for dim in indices]
+    class_indices = values.ravel()
+    one_hot[(*coords, class_indices)] = 1
+    return one_hot
+
+
+def multi_dimentional_one_hot(values: np.ndarray, nb_digit: int):
+    one_hot = np.zeros((*values.shape, nb_digit), dtype=np.float32)
+    indices = np.indices(values.shape)
+    coords = [dim.ravel() for dim in indices]
+    class_indices = values.ravel()
+    one_hot[(*coords, class_indices)] = 1
+    return one_hot
