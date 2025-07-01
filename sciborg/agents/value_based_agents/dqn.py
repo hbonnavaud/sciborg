@@ -25,8 +25,8 @@ class DQN(ValueBasedAgent):
         # Gather parameters
         self.batch_size = params.get("batch_size", 256)
         self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
-        self.steps_before_learning = params.get("steps_before_learning", 10000)
-        self.learning_frequency = params.get("learning_frequency", 10)
+        self.steps_before_learning = params.get("steps_before_learning", 0)
+        self.learning_frequency = params.get("learning_frequency", 1)
         self.nb_gradient_steps = params.get("nb_gradient_steps", 1)
         self.gamma = params.get("gamma", 0.95)
         self.layer_1_size = params.get("layer_1_size", 128)
@@ -59,6 +59,10 @@ class DQN(ValueBasedAgent):
         self.optimizer = self.optimizer_class(self.model.parameters(), lr=self.learning_rate)
         self.target_model = copy.deepcopy(self.model)
 
+    def start_episode(self, observation, test_episode=False):
+        self.epsilon = 1.0
+        super().start_episode(observation, test_episode)
+
     def get_value(self, observations, actions=None):
         with torch.no_grad():
             values = self.model(observations)
@@ -78,10 +82,18 @@ class DQN(ValueBasedAgent):
             action = np.random.randint(self.action_space.n)
         else:
             # greedy_action(self.model, observation) function in RL5 notebook
+            if isinstance(observation, np.ndarray):
+                observation = torch.from_numpy(observation).to(self.device)
             with torch.no_grad():
                 q_values = self.model(observation)
                 action = torch.argmax(q_values).item()
         return action
+
+    def process_interaction(self, action, reward, new_observation, done, learn=True):
+        if learn and not self.under_test:
+            self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
+            self.learn()
+        super().process_interaction(action, reward, new_observation, done, learn=learn)
 
     def learn(self):
         assert not self.under_test
@@ -94,7 +106,10 @@ class DQN(ValueBasedAgent):
                 q_target = rewards + self.gamma * (1 - dones) * q_prime
                 q_values = self.model(observations).gather(1, actions.to(torch.long).unsqueeze(1))
                 loss = self.criterion(q_values, q_target.unsqueeze(1))
-                self.model.learn(loss)
+
+                self.optimizer.zero_grad()
+                loss.backward()
+                self.optimizer.step()
 
             for param, target_param in zip(self.model.parameters(), self.target_model.parameters()):
                 target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)

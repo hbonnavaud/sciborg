@@ -5,7 +5,6 @@ import torch
 from ..rl_agent import RLAgent
 from abc import ABC, abstractmethod
 from gymnasium.spaces import Box, Discrete
-from ..utils.replay_buffer import ReplayBuffer
 
 
 class ValueBasedAgent(RLAgent, ABC):

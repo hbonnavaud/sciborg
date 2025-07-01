@@ -50,14 +50,40 @@ class HER(GoalConditionedWrapper):
         if self.under_test or len(self.last_trajectory) <= self.nb_resample_per_observations:
             return
 
+        # for goal_id in range(50):
+        #     # Sample a goal
+        #     goal_index = randrange(4, len(self.last_trajectory))
+        #     goal = self.goal_from_observation_fun(self.last_trajectory[goal_index][0])
+        #
+        #
+        #     for next_observation_index in range(1, len(self.last_trajectory)):
+        #         observation, action = self.last_trajectory[next_observation_index - 1]
+        #         next_observation, _ = self.last_trajectory[next_observation_index]
+        #         features = self.get_features(observation, goal)
+        #
+        #         # Compute a reward that goes from -1, for the first observation of the fake trajectory, to 0, if the
+        #         # next_observation if the fake goal.
+        #         reward = (next_observation_index / goal_index) - 1
+        #         next_features = self.get_features(next_observation, goal)
+        #
+        #         done = goal_index == next_observation_index
+        #
+        #         (self.reinforcement_learning_agent.replay_buffer
+        #          .append((features, action, reward, next_features, done)))
+
         # For each observation seen :
         for observation_index, (observation, action) in enumerate(self.last_trajectory[:-self.nb_resample_per_observations]):
             next_observation_index = observation_index + 1
             next_observation, _ = self.last_trajectory[next_observation_index]
 
             # sample four goals in future observations
-            for relabelling_id in range(self.nb_resample_per_observations):
-                goal_index = randrange(next_observation_index, len(self.last_trajectory))
+
+            for goal_id in range(50):
+                # Sample a goal
+                goal_index = randrange(4, len(self.last_trajectory))
+
+                # for relabelling_id in range(self.nb_resample_per_observations):
+                #     goal_index = randrange(next_observation_index, len(self.last_trajectory))
                 target_observation, _ = self.last_trajectory[goal_index]
                 goal = self.goal_from_observation_fun(target_observation)
 

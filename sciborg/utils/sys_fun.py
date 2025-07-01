@@ -126,10 +126,11 @@ def save_image(image: np.ndarray, output_directory: str, file_name: str, extensi
     directory_path += os.path.sep
 
     if not os.path.isdir(directory_path):
-        print("directory ", directory_path, " not found", sep="")
-        raise FileNotFoundError("Directory ", directory_path, " not found. Hint: directory without \"/\" at the beginning "
-                                "will be considered as relative path. Add \"/\" at the beginning if your path is "
-                                "absolute, and remove it if its not.")
+        create_dir(directory_path)
+        # print("directory ", directory_path, " not found", sep="")
+        # raise FileNotFoundError("Directory ", directory_path, " not found. Hint: directory without \"/\" at the beginning "
+        #                         "will be considered as relative path. Add \"/\" at the beginning if your path is "
+        #                         "absolute, and remove it if its not.")
     image = image.astype(np.uint8)
     image = Image.fromarray(image)
     create_dir(directory_path)

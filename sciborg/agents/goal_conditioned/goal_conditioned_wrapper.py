@@ -73,23 +73,29 @@ class GoalConditionedWrapper(GoalConditionedAgent, ValueBasedAgent):
             raise NotImplementedError("State space ang goal space with different types are not supported.")
 
     def get_features(self, observations, goals):
-        # If observations are a batch and goal is a single one
+
+        # Both shapes should match exactly, but this function is supposed to work with a batch of observation and a
+        # single goal if needed.
+        assert len(observations.shape) < 3
+        assert len(goals.shape) < 3
         observations_batch_size = 1 if observations.shape == self.observation_space.shape else observations.shape[0]
         goals_batch_size = 1 if goals.shape == self.goal_space.shape else goals.shape[0]
+
+        # If observations are a batch and goal is a single one
         if observations_batch_size == 1 and goals_batch_size > 1:
             if observations.shape != self.observation_space.shape:
                 observations = observations.squeeze()  # Remove batch
             observations = np.tile(observations, (goals_batch_size, *tuple(np.ones(len(observations.shape)).astype(int))))
-        if goals_batch_size == 1 and observations_batch_size > 1:
+        elif goals_batch_size == 1 and observations_batch_size > 1:
             if goals.shape != self.goal_space.shape:
                 goals = goals.squeeze()  # Remove batch
             goals = np.tile(goals, (observations_batch_size, *tuple(np.ones(len(goals.shape)).astype(int))))
 
         if isinstance(self.observation_space, Box) and isinstance(self.goal_space, Box):
-            axis = int(observations_batch_size > 1 or goals_batch_size > 1)
-            return np.concatenate((observations, goals), axis=int(observations_batch_size > 1 or goals_batch_size > 1))
+            return np.concatenate((observations, goals),
+                                  axis=int(observations_batch_size > 1 or goals_batch_size > 1))
         elif isinstance(self.observation_space, Discrete) and isinstance(self.goal_space, Discrete):
-            return observations + goals * self.observation_space.n  # Use a bijection between N² and N
+            return observations + goals * self.observation_space.n
         else:
             raise NotImplementedError("State space ang goal space with different types are not supported.")
 

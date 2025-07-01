@@ -121,7 +121,7 @@ class SAC(ValueBasedAgent):
         self.critic_1 = nn.Sequential(
             nn.Linear(self.observation_size + self.action_size, self.layer_1_size), nn.ReLU(),
             nn.Linear(self.layer_1_size, self.layer_2_size), nn.ReLU(),
-            nn.Linear(self.layer_2_size, 1), nn.Tanh()
+            nn.Linear(self.layer_2_size, 1)
         ).to(self.device)
 
         self.critic_2 = nn.Sequential(
@@ -169,20 +169,22 @@ class SAC(ValueBasedAgent):
             action = self.scale_action(action, Box(-1, 1, (self.action_size,)))
         return action
 
-    def learn_interaction(self, *interaction_data):
+    def store_interaction(self, *interaction_data):
         assert not self.under_test
         self.replay_buffer.append(interaction_data)
 
     def get_value(self, observations, actions=None):
+        if isinstance(observations, np.ndarray):
+            observations = torch.from_numpy(observations).to(dtype=torch.float32, device=self.device)
         with torch.no_grad():
             if actions is None:
-                actions = self.actor(observations)
+                actions, _ = self.actor(observations)
             if isinstance(observations, np.ndarray):
                 observations = torch.Tensor(observations)
             if isinstance(actions, np.ndarray):
                 actions = torch.Tensor(actions)
             critic_value = self.critic_1(torch.concat((observations, actions), dim=-1))
-        return critic_value.flatten().detach().numpy()
+        return critic_value.flatten().cpu().detach().numpy()
 
     def process_interaction(self, action, reward, new_observation, done, learn=True):
         if learn and not self.under_test:

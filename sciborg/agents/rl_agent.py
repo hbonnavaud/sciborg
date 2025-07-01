@@ -62,7 +62,7 @@ class RLAgent(ABC):
         if isinstance(self.action_space, Box):  # Fixed: was gym.spaces.Box
             self.action_size = np.prod(self.action_space.shape)
         else:
-            self.action_size = action_space.n  # Added for discrete actions
+            self.action_size = int(action_space.n)  # Added for discrete actions
 
         self.last_observation = None
         self.episode_id = 0
