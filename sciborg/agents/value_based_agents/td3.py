@@ -8,7 +8,6 @@ from .value_based_agent import ValueBasedAgent
 
 
 class TD3(ValueBasedAgent):
-    NAME = "TD3"
     OBSERVATION_SPACE_TYPE=Box
 
     def __init__(self, *args, **params):
@@ -36,6 +35,7 @@ class TD3(ValueBasedAgent):
                 if set.
         """
         super().__init__(*args, **params)
+        self.name = params.get("name", "TD3")
 
         # Gather parameters
         self.gamma = params.get("gamma", 0.99)
@@ -111,7 +111,15 @@ class TD3(ValueBasedAgent):
         self.action_offset = (torch.from_numpy((self.action_space.high + self.action_space.low) / 2.)
                               .to(device=self.device, dtype=torch.float32))
 
-    def action(self, observation, explore=True):
+    def action(self, observation: np.ndarray, explore=True):
+        """
+        Args:
+            observation: The observation from which we want the agent to take an action.
+            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
+            no matter the explore value here.
+        Returns: The action chosen by the agent.
+        """
         if self.train_interactions_done <= self.steps_before_learning:
             return self.action_space.sample()
 
@@ -126,24 +134,34 @@ class TD3(ValueBasedAgent):
             action = (action * self.action_scale + self.action_offset).cpu().detach().numpy()
         return action
 
-    def get_value(self, observations, actions=None):
-        with torch.no_grad():
-            if actions is None:
-                actions = self.actor(observations) * self.action_scale + self.action_offset
-            if isinstance(observations, np.ndarray):
-                observations = torch.Tensor(observations)
-            if isinstance(actions, np.ndarray):
-                actions = torch.Tensor(actions)
-            critic_value = self.critic_1(torch.concat((observations, actions), dim=-1))
-        return critic_value.flatten().detach().numpy()
-
-    def process_interaction(self, action, reward, new_observation, done, learn=True):
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): the action performed by the agent at this step.
+            reward (float): the reward returned by the environment following this action.
+            new_observation (np.ndarray): the new state reached by the agent with this action.
+            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+                data, and start a learning step or not).
+        """
         if learn and not self.under_test:
             self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
             self.learn()
         super().process_interaction(action, reward, new_observation, done, learn=learn)
 
     def learn(self):
+        """
+        Trigger the agent learning process.
+        Make sure that self.test_episode is False, otherwise, an error will be raised.
+        """
         assert not self.under_test
         if self.train_interactions_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
             states, actions, rewards, new_states, dones = self.replay_buffer.sample(self.batch_size)
@@ -191,3 +209,14 @@ class TD3(ValueBasedAgent):
                 for param, target_param in zip(self.actor.parameters(), self.target_actor.parameters()):
                     target_param.data.copy_(self.actor_tau * param.data + (1 - self.actor_tau) * target_param.data)
             self.learning_steps_done += 1
+
+    def get_value(self, observations, actions=None):
+        with torch.no_grad():
+            if actions is None:
+                actions = self.actor(observations) * self.action_scale + self.action_offset
+            if isinstance(observations, np.ndarray):
+                observations = torch.Tensor(observations)
+            if isinstance(actions, np.ndarray):
+                actions = torch.Tensor(actions)
+            critic_value = self.critic_1(torch.concat((observations, actions), dim=-1))
+        return critic_value.flatten().detach().numpy()

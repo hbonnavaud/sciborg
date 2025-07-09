@@ -1,0 +1,9 @@
+ - Terminer refactor conditioned agent
+ - Refactor le système save/load des agents
+ - Refactor DIAYN
+ - Intégrer DIAYN V2
+ - Intégrer https://github.com/Paul-antoineLeTolguenec/RunAwayFromYourPast/tree/clean/src/baselines
+    - ICM
+    - LSD
+    - METRA
+    - CSD

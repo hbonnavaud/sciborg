@@ -115,7 +115,7 @@ class DIAYN(RLAgent):
     def _sample_skill(self, forced_skill=None):
         """Sample a random skill"""
         assert forced_skill is None or isinstance(forced_skill, int)
-        skill_idx = forced_skill if forced_skill else np.random.randint(0, self.nb_skills)
+        skill_idx = forced_skill if forced_skill is not None else np.random.randint(0, self.nb_skills)
         skill_onehot = np.zeros(self.nb_skills)
         skill_onehot[skill_idx] = 1.0
         return skill_idx, skill_onehot

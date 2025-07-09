@@ -17,40 +17,13 @@ class ValueBasedAgent(RLAgent, ABC):
         """
         super().__init__(*args, **params)
 
-    def scale_action(self, actions: Union[np.ndarray, torch.Tensor], source_action_box: Box):
-        """
-        Scale an action within the given bounds action_low to action_high, to our action_space.
-        The result action is also clipped to fit in the action space in case the given action wasn't exactly inside
-        the given bounds.
-        Useless if our action space is discrete.
-        @return: scaled and clipped actions. WARNING: actions are both attribute and result. They are modified by the
-        function. They are also returned for better convenience.
-        """
-        assert isinstance(self.action_space, Box), \
-            "Scale_action is useless and cannot work if our action space is discrete."
-        assert isinstance(actions, np.ndarray) or isinstance(actions, torch.Tensor)
-        assert isinstance(source_action_box, Box)
-
-        source_low, source_high = source_action_box.low, source_action_box.high
-        target_low, target_high = self.action_space.low, self.action_space.high
-        if isinstance(actions, torch.Tensor):
-            source_low, source_high = (torch.tensor(source_low, device=self.device),
-                                       torch.tensor(source_high, device=self.device))
-            target_low, target_high = (torch.tensor(target_low, device=self.device),
-                                       torch.tensor(target_high, device=self.device))
-
-        # Scale action to the action space
-        scale = (target_high - target_low) / (source_high - source_low)
-        actions = actions * scale + (target_low - (source_low * scale))
-
-        # Clip actions to the action space to prevent floating point errors
-        clip_fun = np.clip if isinstance(actions, np.ndarray) else torch.clamp
-        return clip_fun(actions, target_low, target_high)
-
     @abstractmethod
-    def get_value(self, features, actions=None):
-        return 0
-
-    @abstractmethod
-    def learn(self):
-        pass
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+        """
+        Args:
+            observations: the observation(s) from which we want to obtain a value. Could be a batch.
+            actions: the action that will be performed from the given observation(s). If none, the agent compute itself
+                which action it would have taken from these observations.
+        Returns: the value of the given features.
+        """
+        raise NotImplementedError("This function is not implemented at the interface level.")

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     render = False
     # nb_interactions = 70
     environment = gym.make("Pendulum-v1", render_mode="rgb_array")
-    # environment = PointMazeV0(goal_conditioned=True, action_noise=1.0)
+    # environment = PointMazeV0(conditioned=True, action_noise=1.0)
     # agent = HER(TD3, environment.observation_space, environment.action_space, goal_space=environment.goal_space,
     #   layer_1_size=64, layer_2_size=64, learning_rate=3e-4, batch_size=128)
     agent = TD3(environment.observation_space, environment.action_space)

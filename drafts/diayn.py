@@ -9,82 +9,28 @@ from statistics import mean
 
 skills_colors = [
     [255, 0, 0],      # Red
-    [255, 64, 0],     # Orange-red
     [255, 128, 0],    # Orange
-    [255, 192, 0],    # Yellow-orange
     [255, 255, 0],    # Yellow
-    [192, 255, 0],    # Yellow-green
     [128, 255, 0],    # Lime
     [0, 255, 0],      # Green
-    [0, 255, 128],    # Spring green
     [0, 255, 255],    # Cyan
-    [0, 128, 255],    # Sky blue
     [0, 0, 255],      # Blue
     [128, 0, 255],    # Violet
     [255, 0, 255],    # Magenta / Purple
 ]
 
 
-def episode(
-    agent: DIAYN, 
-    environment: PointMazeV0, 
-    forced_skill: Optional[int] = None, 
-    nb_interactions: int = 100, 
-    learn: bool = True,
-    render_image: Optional[np.ndarray] = None):
-  
-
-  assert forced_skill is None or isinstance(forced_skill, int)
-  
-  observation, info = environment.reset()
-  agent.start_episode(observation, forced_skill=forced_skill, test_episode=not learn)
-  for interaction_id in range(nb_interactions):
-    action = agent.action(observation)
-    new_observation, reward, terminated, truncated, info = environment.step(action)
-    agent.process_interaction(action, reward, new_observation, terminated)
-    if render_image is not None:
-        if isinstance(environment, GridWorldV0):
-            environment.set_tile_color(render_image, skills_colors[forced_skill], new_observation)
-        else:
-            environment.place_point(render_image, skills_colors[forced_skill], *new_observation[:2], radius=1)
-  return render_image
-
-def render_skills(agent: DIAYN, environment: PointMazeV0):
-  render_image = environment.render(show_agent=False, show_rewards=False)
-  for skill_id in range(agent.nb_skills):
-    for episode_id in range(10):
-      render_image = episode(agent, environment, forced_skill=skill_id, nb_interactions=100, learn=False, render_image=render_image)
-  return render_image
-
 if __name__ == "__main__":
 
-
-    env = "grid_world"
-
-    # Initialisation
-    if env == "grid_world":
-
-        room_size = 50
-        maze_array = np.zeros((room_size, room_size))
-        maze_array[room_size // 2, room_size // 2] = 2
-        maze_array[0, :] = 1
-        maze_array[-1, :] = 1
-        maze_array[:, 0] = 1
-        maze_array[:, -1] = 1
-
-        environment = GridWorldV0(maze_array=maze_array, goal_conditioned=False, reset_anywhere=False)
-        wrapped_agent_class = MunchausenDQN
-    else:
-        environment = PointMazeV0(goal_conditioned=False, action_noise=0.0)
-        wrapped_agent_class = TD3
-
+    # Instantiate environment
+    environment = PointMazeV0(goal_conditioned=False, action_noise=0.5)
     agent = DIAYN(observation_space=environment.observation_space,
                 action_space=environment.action_space,
-                wrapped_agent_class=wrapped_agent_class,
-                nb_skills=10)
+                wrapped_agent_class=SAC,
+                nb_skills=9)
 
     # Training
-    steps_per_episodes = 100
+    steps_per_episodes = 15
     mean_intrinsic_rewards = []
     mean_discriminator_losses = []
     for episode_id in range(5000):
@@ -98,8 +44,8 @@ if __name__ == "__main__":
         for interaction_id in range(steps_per_episodes):
             print(f"Episode {episode_id} ... step {interaction_id} ({interaction_id / steps_per_episodes * 100}%).", end="\r")
             action = agent.action(observation)
-            new_observation, reward, terminated, truncated, info = environment.step(action)
-            intrinsic_reward, discriminator_loss = agent.process_interaction(action, reward, new_observation, terminated)
+            observation, reward, terminated, truncated, info = environment.step(action)
+            intrinsic_reward, discriminator_loss = agent.process_interaction(action, reward, observation, terminated)
             if intrinsic_reward:
                 intrinsic_reward_sum += intrinsic_reward
                 nb_rewards += 1
@@ -122,11 +68,22 @@ if __name__ == "__main__":
         else:
             print(f"Episode {episode_id} DONE.")
 
-        if episode_id % 500 == 0:
+        if episode_id % 200 == 0:
             # Verification
-            image = render_skills(agent, environment)
-            save_image(image, "outputs", "Learned_skills_ep_" + str(episode_id))
 
-    # Verification
-    image = render_skills(agent, environment)
-    save_image(image, "outputs", "final_skills")
+            render_image = environment.render(show_agent=False, show_rewards=False)
+            for skill_id in range(agent.nb_skills):
+                for _ in range(10):
+                    observation, info = environment.reset()
+                    agent.start_episode(observation, forced_skill=skill_id, test_episode=True)
+                    for interaction_id in range(70):
+                        action = agent.action(observation)
+                        observation, reward, terminated, truncated, info = environment.step(action)
+                        agent.process_interaction(action, reward, observation, terminated)
+                        if render_image is not None:
+                            if isinstance(environment, GridWorldV0):
+                                environment.set_tile_color(render_image, skills_colors[skill_id], observation)
+                            else:
+                                environment.place_point(render_image, skills_colors[skill_id], *observation[:2], radius=1)
+            save_image(render_image, "outputs_0.5_noise", "Learned_skills_ep_" + str(episode_id))
+

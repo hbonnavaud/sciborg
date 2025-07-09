@@ -72,7 +72,14 @@ class RLAgent(ABC):
         self.under_test = False
         self.episode_started = False
 
-    def start_episode(self, observation, test_episode=False):  # Simplified signature
+    def start_episode(self, observation: np.ndarray, test_episode: bool = False):
+        """
+        Args:
+            observation: The first observation of the episode.
+            test_episode: Boolean indication whether the episode is a test episode or not.
+            If it is a test episode, the agent will not explore (fully deterministic actions) and not learn (no
+            interaction data storage or learning process).
+        """
         if self.episode_started:
             self.stop_episode()
         self.episode_started = True
@@ -80,11 +87,49 @@ class RLAgent(ABC):
         self.episode_time_step_id = 0
         self.under_test = test_episode
 
-    def process_interaction(self, action, reward, new_observation, done, learn=True):
+    @abstractmethod
+    def action(self, observation: np.ndarray, explore=True):
+        """
+        Args:
+            observation: The observation from which we want the agent to take an action.
+            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
+            no matter the explore value here.
+        Returns: The action chosen by the agent.
+        """
+        pass
+
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): the action performed by the agent at this step.
+            reward (float): the reward returned by the environment following this action.
+            new_observation (np.ndarray): the new state reached by the agent with this action.
+            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+                data, and start a learning step or not).
+        """
         self.episode_time_step_id += 1
         if learn and not self.under_test:
             self.train_interactions_done += 1
+            self.learn()
         self.last_observation = new_observation
+
+    @abstractmethod
+    def learn(self):
+        """
+        Trigger the agent learning process.
+        Make sure that self.test_episode is False, otherwise, an error will be raised.
+        """
+        pass
 
     def stop_episode(self):
         self.episode_id += 1
@@ -173,7 +218,3 @@ class RLAgent(ABC):
                 model_path = os.path.join(directory, k + ".pt")
                 if os.path.exists(model_path):
                     getattr(self, k).load_state_dict(torch.load(model_path, map_location=self.device))
-
-    @abstractmethod
-    def action(self, observation, explore=True):
-        pass

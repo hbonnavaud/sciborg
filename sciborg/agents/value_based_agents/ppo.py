@@ -99,8 +99,16 @@ class Model(torch.nn.Module):
         observation = observation.to(self.device, dtype=torch.float32)
         return self.model(observation)
 
-    def get_value(self, observation):
-        return self.critic(self.features(observation)).squeeze()
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+        """
+        Args:
+            observations: the observation(s) from which we want to obtain a value. Could be a batch.
+            observations: the observation(s) from which we want to obtain a value. Could be a batch.
+            actions: the action that will be performed from the given observation(s). If none, the agent compute itself
+                which action it would have taken from these observations.
+        Returns: the value of the given features.
+        """
+        return self.critic(self.features(observations)).squeeze()
 
     def get_action(self, observation, explore=True):
         logits = self.actor(self.features(observation))
@@ -119,11 +127,11 @@ class Model(torch.nn.Module):
 
 
 class PpoDiscreteAgent(Agent):
-    NAME="PPO"
     OBSERVATION_SPACE_TYPE=Discrete
     
     def __init__(self, *args, **params):
         super().__init__(*args, **params)
+        self.name = params.get("name", "PPO")
 
         # Gather parameters
         self.model = params.get("model", None)
@@ -171,13 +179,38 @@ class PpoDiscreteAgent(Agent):
     def set_device(self, device):
         self.model.to(device=device)
 
-    def action(self, observation, explore=True):
+    def action(self, observation: np.ndarray, explore=True):
+        """
+        Args:
+            observation: The observation from which we want the agent to take an action.
+            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
+            no matter the explore value here.
+        Returns: The action chosen by the agent.
+        """
         with torch.no_grad():
             return self.model.get_action(observation, explore=explore).detach().cpu().item()
 
-    def process_interaction(self, action, reward, new_observation, done, learn=True):
-        if learn:
-            self.store_transition(self.last_observation, action, reward, new_observation, done)
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): the action performed by the agent at this step.
+            reward (float): the reward returned by the environment following this action.
+            new_observation (np.ndarray): the new state reached by the agent with this action.
+            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+                data, and start a learning step or not).
+        """
+        if learn and not self.under_test:
+            self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
             self.learn()
         super().process_interaction(action, reward, new_observation, done, learn=learn)
 
@@ -204,6 +237,10 @@ class PpoDiscreteAgent(Agent):
         self.store_transition(observation, action, reward, next_observation, done)
 
     def learn(self):
+        """
+        Trigger the agent learning process.
+        Make sure that self.test_episode is False, otherwise, an error will be raised.
+        """
         if self.nb_learning_data_available >= self.buffer_size:
 
             observations = torch.tensor(np.array(self.observations)).float().to(self.device)

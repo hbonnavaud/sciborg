@@ -20,8 +20,6 @@ class MunchausenDQN(ValueBasedAgent):
     This Q-Function is used to find the best action to execute in a given observation.
     """
 
-    name = "Munchausen_DQN"
-
     def __init__(self, observation_space, action_space, **params):
         """
         @param observation_space: Environment's observation space.
@@ -30,7 +28,7 @@ class MunchausenDQN(ValueBasedAgent):
         """
 
         super().__init__(observation_space, action_space, **params)
-
+        self.name = params.get("name", "Munchausen DQN")
 
         self.min_samples_before_learn = params.get("min_samples_before_learn", 100)
         self.batch_size = params.get("batch_size", 256)
@@ -76,7 +74,14 @@ class MunchausenDQN(ValueBasedAgent):
         self.model.to(device)
         self.target_model.to(device)
 
-    def get_value(self, observations, actions=None):
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+        """
+        Args:
+            observations: the observation(s) from which we want to obtain a value. Could be a batch.
+            actions: the action that will be performed from the given observation(s). If none, the agent compute itself
+                which action it would have taken from these observations.
+        Returns: the value of the given features.
+        """
         with torch.no_grad():
             values = self.model(observations)
             if actions is None:
@@ -87,7 +92,15 @@ class MunchausenDQN(ValueBasedAgent):
                 values = values.gather(1, actions.to(torch.long).unsqueeze(1))
         return values.cpu().detach().numpy()
 
-    def action(self, observation, explore=True):
+    def action(self, observation: np.ndarray, explore=True):
+        """
+        Args:
+            observation: The observation from which we want the agent to take an action.
+            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
+            no matter the explore value here.
+        Returns: The action chosen by the agent.
+        """
         assert observation.shape == self.observation_space.shape
         # greedy_action(self.model, observation) function in RL5 notebook
         with torch.no_grad():
@@ -97,6 +110,10 @@ class MunchausenDQN(ValueBasedAgent):
         return action
 
     def learn(self):
+        """
+        Trigger the agent learning process.
+        Make sure that self.test_episode is False, otherwise, an error will be raised.
+        """
         assert not self.under_test
 
         for _ in range(self.nb_gradient_steps):
@@ -126,12 +143,26 @@ class MunchausenDQN(ValueBasedAgent):
             self.target_model.converge_to(self.model, self.tau)
             self.steps_since_last_target_update = 0
 
-    def process_interaction(self, action, reward, new_observation, done, learn=True, old_observation=None):
-        if done:
-            debug = 1
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): the action performed by the agent at this step.
+            reward (float): the reward returned by the environment following this action.
+            new_observation (np.ndarray): the new state reached by the agent with this action.
+            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+                data, and start a learning step or not).
+        """
         if learn and not self.under_test:
-            old_observation = self.last_observation if old_observation is None else old_observation
-            self.save_interaction(old_observation, action, reward, new_observation, done)
+            self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
             self.learn()
         super().process_interaction(action, reward, new_observation, done, learn=learn)
 

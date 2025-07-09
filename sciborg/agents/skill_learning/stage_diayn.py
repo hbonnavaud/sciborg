@@ -140,7 +140,7 @@ class DIAYNAgentContinuous(SACAgent, SkillLearner):
                                                nb_skills=self.nb_skills, layer1_size=discriminator_layer1_size,
                                                layer2_size=discriminator_layer2_size)
 
-        self.checkpoints_dir = "outputs/checkpoints/"
+        self.checkpoints_dir = "outputs_1.0_noise/checkpoints/"
 
     def set_outputs_directory(self, outputs_directory):
         SkillLearner.set_outputs_directory(self, outputs_directory)

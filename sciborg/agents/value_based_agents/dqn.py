@@ -16,11 +16,11 @@ class DQN(ValueBasedAgent):
     This Q-Function is used to find the best action to execute in a given observation.
     """
 
-    NAME = "DQN"
     OBSERVATION_SPACE_TYPE=Discrete
 
     def __init__(self, *args, **params):
         super().__init__(*args, **params)
+        self.name = params.get("name", "DQN")
         
         # Gather parameters
         self.batch_size = params.get("batch_size", 256)
@@ -63,18 +63,15 @@ class DQN(ValueBasedAgent):
         self.epsilon = 1.0
         super().start_episode(observation, test_episode)
 
-    def get_value(self, observations, actions=None):
-        with torch.no_grad():
-            values = self.model(observations)
-            if actions is None:
-                values = values.max(-1).values
-            else:
-                if not isinstance(actions, torch.Tensor):
-                    actions = torch.tensor(actions)
-                values = values.gather(1, actions.to(torch.long).unsqueeze(1))
-        return values.cpu().detach().numpy()
-
-    def action(self, observation, explore=True):
+    def action(self, observation: np.ndarray, explore=True):
+        """
+        Args:
+            observation: The observation from which we want the agent to take an action.
+            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
+            no matter the explore value here.
+        Returns: The action chosen by the agent.
+        """
         if explore and not self.under_test and self.train_interactions_done > self.steps_before_epsilon_decay:
             self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_step)
 
@@ -89,13 +86,34 @@ class DQN(ValueBasedAgent):
                 action = torch.argmax(q_values).item()
         return action
 
-    def process_interaction(self, action, reward, new_observation, done, learn=True):
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): the action performed by the agent at this step.
+            reward (float): the reward returned by the environment following this action.
+            new_observation (np.ndarray): the new state reached by the agent with this action.
+            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+                data, and start a learning step or not).
+        """
         if learn and not self.under_test:
             self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
             self.learn()
         super().process_interaction(action, reward, new_observation, done, learn=learn)
 
     def learn(self):
+        """
+        Trigger the agent learning process.
+        Make sure that self.test_episode is False, otherwise, an error will be raised.
+        """
         assert not self.under_test
         if (self.train_interactions_done >= self.steps_before_learning
                 and self.train_interactions_done % self.learning_frequency == 0
@@ -114,7 +132,20 @@ class DQN(ValueBasedAgent):
             for param, target_param in zip(self.model.parameters(), self.target_model.parameters()):
                 target_param.data.copy_(self.tau * param.data + (1 - self.tau) * target_param.data)
 
-    def set_device(self, device):
-        super().set_device(device)
-        self.model.to(device)
-        self.target_model.to(device)
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+        """
+        Args:
+            observations: the observation(s) from which we want to obtain a value. Could be a batch.
+            actions: the action that will be performed from the given observation(s). If none, the agent compute itself
+                which action it would have taken from these observations.
+        Returns: the value of the given features.
+        """
+        with torch.no_grad():
+            values = self.model(observations)
+            if actions is None:
+                values = values.max(-1).values
+            else:
+                if not isinstance(actions, torch.Tensor):
+                    actions = torch.tensor(actions)
+                values = values.gather(1, actions.to(torch.long).unsqueeze(1))
+        return values.cpu().detach().numpy()

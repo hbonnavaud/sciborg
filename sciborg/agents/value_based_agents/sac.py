@@ -59,7 +59,6 @@ class Actor(torch.nn.Module):
 
 
 class SAC(ValueBasedAgent):
-    NAME = "SAC"
     OBSERVATION_SPACE_TYPE=Box
 
     def __init__(self, *args, **params):
@@ -83,6 +82,7 @@ class SAC(ValueBasedAgent):
         """
 
         super().__init__(*args, **params)
+        self.name = params.get("name", "SAC")
         
         assert self.device is not None
         # Gather parameters
@@ -157,7 +157,15 @@ class SAC(ValueBasedAgent):
             self.alpha = self.log_alpha.exp().item()
             self.alpha_optimizer = torch.optim.Adam([self.log_alpha], lr=self.alpha_lr, eps=1e-4)
 
-    def action(self, observation, explore=True):
+    def action(self, observation: np.ndarray, explore=True):
+        """
+        Args:
+            observation: The observation from which we want the agent to take an action.
+            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
+            no matter the explore value here.
+        Returns: The action chosen by the agent.
+        """
         with torch.no_grad():
             observation = torch.tensor(observation, dtype=torch.float).to(self.device)
             action = self.actor.get_action(observation)[0].to(self.device)
@@ -169,30 +177,34 @@ class SAC(ValueBasedAgent):
             action = self.scale_action(action, Box(-1, 1, (self.action_size,)))
         return action
 
-    def store_interaction(self, *interaction_data):
-        assert not self.under_test
-        self.replay_buffer.append(interaction_data)
-
-    def get_value(self, observations, actions=None):
-        if isinstance(observations, np.ndarray):
-            observations = torch.from_numpy(observations).to(dtype=torch.float32, device=self.device)
-        with torch.no_grad():
-            if actions is None:
-                actions, _ = self.actor(observations)
-            if isinstance(observations, np.ndarray):
-                observations = torch.Tensor(observations)
-            if isinstance(actions, np.ndarray):
-                actions = torch.Tensor(actions)
-            critic_value = self.critic_1(torch.concat((observations, actions), dim=-1))
-        return critic_value.flatten().cpu().detach().numpy()
-
-    def process_interaction(self, action, reward, new_observation, done, learn=True):
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): the action performed by the agent at this step.
+            reward (float): the reward returned by the environment following this action.
+            new_observation (np.ndarray): the new state reached by the agent with this action.
+            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+                data, and start a learning step or not).
+        """
         if learn and not self.under_test:
             self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
             self.learn()
         super().process_interaction(action, reward, new_observation, done, learn=learn)
 
     def learn(self):
+        """
+        Trigger the agent learning process.
+        Make sure that self.test_episode is False, otherwise, an error will be raised.
+        """
         assert not self.under_test
         if self.train_interactions_done >= self.steps_before_learning and len(self.replay_buffer) > self.batch_size:
             observations, actions, rewards, next_observations, dones = self.replay_buffer.sample(self.batch_size)
@@ -245,3 +257,23 @@ class SAC(ValueBasedAgent):
                 self.target_critic_1 = copy_weights(self.target_critic_1, self.critic_1, self.tau)
                 self.target_critic_2 = copy_weights(self.target_critic_2, self.critic_2, self.tau)
             self.learning_steps_done += 1
+
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+        """
+        Args:
+            observations: the observation(s) from which we want to obtain a value. Could be a batch.
+            actions: the action that will be performed from the given observation(s). If none, the agent compute itself 
+                which action it would have taken from these observations.
+        Returns: the value of the given features.
+        """
+        if isinstance(observations, np.ndarray):
+            observations = torch.from_numpy(observations).to(dtype=torch.float32, device=self.device)
+        with torch.no_grad():
+            if actions is None:
+                actions, _ = self.actor(observations)
+            if isinstance(observations, np.ndarray):
+                observations = torch.Tensor(observations)
+            if isinstance(actions, np.ndarray):
+                actions = torch.Tensor(actions)
+            critic_value = self.critic_1(torch.concat((observations, actions), dim=-1))
+        return critic_value.flatten().cpu().detach().numpy()

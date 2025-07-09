@@ -1,19 +1,17 @@
-# Goal conditioned agent
 from random import randrange
 from typing import Union
-
-import numpy as np
 from gymnasium.spaces import Box, Discrete
-
-from .goal_conditioned_wrapper import GoalConditionedWrapper
+from conditioned_wrapper import ConditioningWrapper
 from ..value_based_agents.value_based_agent import ValueBasedAgent
 
 
-class HER(GoalConditionedWrapper):
+class HER(ConditioningWrapper):
     """
     A global agent class for goal conditioned agents. The # NEW tag indicate differences between Agent class and this
     one.
     """
+
+    NAME = "HER"
 
     def __init__(self,
                  reinforcement_learning_agent_class,
@@ -25,7 +23,7 @@ class HER(GoalConditionedWrapper):
                  **params):
 
         # Super class init
-        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, goal_space=goal_space,
+        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, =goal_space,
                          goal_from_observation_fun=goal_from_observation_fun, **params)
 
         # Trajectory relabelling attributes
@@ -36,7 +34,15 @@ class HER(GoalConditionedWrapper):
         self.name = self.reinforcement_learning_agent.name + " + HER"
 
     def start_episode(self, *information, test_episode=False):
-        observation, goal = information
+        """
+        Args:
+            observation: The first observation of the episode.
+            conditioning: The conditioning of the episode.
+            test_episode: Boolean indication whether the episode is a test episode or not.
+            If it is a test episode, the agent will not explore (fully deterministic actions) and not learn (no
+            interaction data storage or learning process).
+        """
+        observation, conditioning = information
         self.last_trajectory = []
         return super().start_episode(observation, goal, test_episode=test_episode)
 
@@ -50,51 +56,27 @@ class HER(GoalConditionedWrapper):
         if self.under_test or len(self.last_trajectory) <= self.nb_resample_per_observations:
             return
 
-        # for goal_id in range(50):
-        #     # Sample a goal
-        #     goal_index = randrange(4, len(self.last_trajectory))
-        #     goal = self.goal_from_observation_fun(self.last_trajectory[goal_index][0])
-        #
-        #
-        #     for next_observation_index in range(1, len(self.last_trajectory)):
-        #         observation, action = self.last_trajectory[next_observation_index - 1]
-        #         next_observation, _ = self.last_trajectory[next_observation_index]
-        #         features = self.get_features(observation, goal)
-        #
-        #         # Compute a reward that goes from -1, for the first observation of the fake trajectory, to 0, if the
-        #         # next_observation if the fake goal.
-        #         reward = (next_observation_index / goal_index) - 1
-        #         next_features = self.get_features(next_observation, goal)
-        #
-        #         done = goal_index == next_observation_index
-        #
-        #         (self.reinforcement_learning_agent.replay_buffer
-        #          .append((features, action, reward, next_features, done)))
-
         # For each observation seen :
         for observation_index, (observation, action) in enumerate(self.last_trajectory[:-self.nb_resample_per_observations]):
-            next_observation_index = observation_index + 1
-            next_observation, _ = self.last_trajectory[next_observation_index]
+            new_observation_index = observation_index + 1
+            new_observation, _ = self.last_trajectory[new_observation_index]
 
             # sample four goals in future observations
-
-            for goal_id in range(50):
-                # Sample a goal
-                goal_index = randrange(4, len(self.last_trajectory))
-
-                # for relabelling_id in range(self.nb_resample_per_observations):
-                #     goal_index = randrange(next_observation_index, len(self.last_trajectory))
+            for relabelling_id in range(self.nb_resample_per_observations):
+                goal_index = randrange(new_observation_index, len(self.last_trajectory))
                 target_observation, _ = self.last_trajectory[goal_index]
                 goal = self.goal_from_observation_fun(target_observation)
 
                 features = self.get_features(observation, goal)
                 # Compute a reward that goes from -1, for the first observation of the fake trajectory, to 0, if the
-                # next_observation if the fake goal.
-                reward = (next_observation_index / goal_index) - 1
-                next_features = self.get_features(next_observation, goal)
+                # new_observation if the fake goal.
+                reward = 0 if new_observation_index == goal_index else -1
+                new_features = self.get_features(new_observation, goal)
 
-                done = goal_index == next_observation_index
+                done = goal_index == new_observation_index
 
-                (self.reinforcement_learning_agent.replay_buffer
-                 .append((features, action, reward, next_features, done)))
+                self.reinforcement_learning_agent.replay_buffer.append((features, action, reward, new_features, done))
         super().stop_episode()
+
+    def goal_from_observation_fun(self, observation):
+        return observation[..., :self.goal_space.shape[-1]]
