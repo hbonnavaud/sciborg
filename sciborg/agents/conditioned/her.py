@@ -2,7 +2,7 @@ from random import randrange
 from typing import Union
 from gymnasium.spaces import Box, Discrete
 from conditioned_wrapper import ConditioningWrapper
-from ..value_based_agents.value_based_agent import ValueBasedAgent
+import numpy as np
 
 
 class HER(ConditioningWrapper):
@@ -18,40 +18,71 @@ class HER(ConditioningWrapper):
                  observation_space: Union[Box, Discrete],
                  action_space: Union[Box, Discrete],
                  goal_space: Union[Box, Discrete] = None,
-                 goal_from_observation_fun=None,
                  nb_resample_per_observations: int = 4,
                  **params):
+        """
+        Args:
+            observation_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's observation space.
+            action_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's action_space.
+            conditioning_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Conditioning space.
+            name (str, optional): The agent's name.
+            device (torch.device, optional): The device on which the agent operates.
+            reinforcement_learning_agent_class: The class of the agent to be wrapped.
+                This class will be instantiated using the given parameters, and the computed information (such as the
+                new conditioned observation space).
+        """
 
-        # Super class init
-        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, =goal_space,
-                         goal_from_observation_fun=goal_from_observation_fun, **params)
+        # Super class init: goal_space is used as the ConditioningWrapper conditioning space, because our agent is
+        # goal-conditioned here.
+        super().__init__(reinforcement_learning_agent_class, observation_space, action_space, goal_space, **params)
+        self.name = params.get("name", self.reinforcement_learning_agent.name + " + HER")
 
         # Trajectory relabelling attributes
         self.last_trajectory = []
         self.nb_resample_per_observations = nb_resample_per_observations
 
-        # Modify instance name
-        self.name = self.reinforcement_learning_agent.name + " + HER"
-
-    def start_episode(self, *information, test_episode=False):
+    def start_episode(self, *episode_information, test_episode: bool = False):
         """
         Args:
-            observation: The first observation of the episode.
-            conditioning: The conditioning of the episode.
-            test_episode: Boolean indication whether the episode is a test episode or not.
+            episode_information (Tuple[np.ndarray, np.ndarray]): A tuple that contains:
+                observation (np.ndarray): The first observation of the episode.
+                goal (np.ndarray): The goal that will condition the episode.
+            test_episode (bool, optional): Boolean indication whether the episode is a test episode or not.
             If it is a test episode, the agent will not explore (fully deterministic actions) and not learn (no
             interaction data storage or learning process).
         """
-        observation, conditioning = information
+        observation, goal = episode_information
         self.last_trajectory = []
         return super().start_episode(observation, goal, test_episode=test_episode)
 
-    def process_interaction(self, action, next_observation, reward, done, learn=True):
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
+        """
+        Processed the passed interaction using the given information.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
+        Therefore, it does not appear in the function signature.
+        Args:
+            action (np.ndarray): The action performed by the agent at this step.
+            reward (float): The reward returned by the environment following this action.
+            new_observation (np.ndarray): The new state reached by the agent with this action.
+            done (bool): Whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool, optional): Whether the agent cal learn from this step or not (will define if the agent can
+                save this interaction data, and start a learning step or not).
+        """
         if learn and not self.under_test:
             self.last_trajectory.append((self.last_observation, action))
-        super().process_interaction(action, next_observation, reward, done, learn=learn)
+        super().process_interaction(action, reward, new_observation, done, learn=learn)
 
     def stop_episode(self):
+        """
+        Function that should be called everytime an episode is done.
+        For most agents, it updates some variables, and fill the replay buffer with some more interaction data from the
+        passed episode trajectory.
+        """
         # Relabel last trajectory
         if self.under_test or len(self.last_trajectory) <= self.nb_resample_per_observations:
             return
@@ -78,5 +109,13 @@ class HER(ConditioningWrapper):
                 self.reinforcement_learning_agent.replay_buffer.append((features, action, reward, new_features, done))
         super().stop_episode()
 
-    def goal_from_observation_fun(self, observation):
+    def goal_from_observation_fun(self, observation: np.ndarray) -> np.ndarray:
+        """
+
+        Args:
+            observation (np.ndarray): The observation from which we want a goal.
+
+        Returns:
+            np.ndarray: A goal that could be associated to the given observation.
+        """
         return observation[..., :self.goal_space.shape[-1]]

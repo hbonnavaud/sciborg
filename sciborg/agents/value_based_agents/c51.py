@@ -50,6 +50,45 @@ class C51(ValueBasedAgent):
     OBSERVATION_SPACE_TYPE=Discrete
 
     def __init__(self, *args, **params):
+
+        """
+        Args:
+            observation_space (Union[gym.spaces.Box, gym.spaces.Discrete]): The environment's observation space.
+            action_space (Union[gym.spaces.Box, gym.spaces.Discrete]): The environment's action space.
+            name (str, optional): The agent's name.
+            device (torch.device, optional): The device on which the agent operates.
+            batch_size (int, optional): Number of samples in each training batch.
+            replay_buffer_size (int, optional): Maximum number of interaction records the replay buffer can store
+                before it is full.
+            steps_before_learning (int, optional): Number of steps to take before learning begins, allowing the replay
+                buffer to fill.
+            learning_frequency (int, optional): Interval of learning steps. Learning is triggered every time the
+                current step index modulo `my_var` equals zero.
+            nb_gradient_steps (int, optional): Specifies how many times the learning process is repeated each time
+                `agent.learn()` is called.
+            gamma (float, optional): Discount factor used in the critic's target computation formula.
+            layer_1_size (int, optional): Size of the first layer in the actor, critic, and target networks.
+            layer_2_size (int, optional): Size of the second layer in the actor, critic, and target networks.
+            initial_epsilon (Union[float, int], optional): Initial value for the epsilon attribute.
+            final_epsilon (Union[float, int], optional): Final (i.e. lowest) value for the epsilon attribute.
+            steps_before_epsilon_decay (int, optional): How many action (in learning steps) have to be performed before
+                epsilon starts to decay.
+            epsilon_decay_period (int, optional): How long does the epsilon attribute have to decay before to reach its
+                final value (in this implementation, the decay step is not given, but computed from all the other
+                epsilon parameters).
+            nb_atoms (int, optional): Number of atoms in the Q-network's output. This output is a categorical
+                distribution (like a barplot). The number of atoms is the number of categories in this distribution.
+            q_value_min (Union[int, float], optional): The lowest possible value for the Q-network's output
+                distribution.
+            q_value_max (Union[int, float], optional): The highest possible value fot the Q-network's output
+                distribution.
+            model (torch.nn.module, optional): A model to replace the default Q-network. It is optional though.
+            optimizer_class (Type[torch.optim.Optimizer], optional): The class of the optimizer to use, it will be
+                instantiated using the model parameters and given learning rate.
+            learning_rate (float, optional): Learning rate for the Q-network.
+            tau (float, optional): Soft update coefficient for the target actor and critic networks.
+        """
+
         super().__init__(*args, **params)
         self.name = params.get("name", "C51")
 
@@ -80,24 +119,25 @@ class C51(ValueBasedAgent):
         self.epsilon_step = (self.initial_epsilon - self.final_epsilon) / self.epsilon_decay_period
         self.total_steps = 0
 
-        if model is None:
+        if self.model is None:
             self.model = QNetwork(self.observation_size, self.action_space.n,
                                   layer_1_size=self.layer_1_size, layer_2_size=self.layer_2_size,
                                   nb_atoms=self.nb_atoms, q_value_min=self.q_value_min, q_value_max=self.q_value_max)
         else:
-            assert isinstance(model, torch.nn.Module)
-            self.model = model
-        assert issubclass(optimizer, optim.Optimizer)
-        self.optimizer = optimizer(self.model.parameters(), lr=self.learning_rate)
+            assert isinstance(self.model, torch.nn.Module)
+            self.model = self.model
+        assert issubclass(self.optimizer, optim.Optimizer)
+        self.optimizer = self.optimizer(self.model.parameters(), lr=self.learning_rate)
         self.target_model = copy.deepcopy(self.model)
 
-    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None) -> np.ndarray:
         """
         Args:
-            observations: the observation(s) from which we want to obtain a value. Could be a batch.
-            actions: the action that will be performed from the given observation(s). If none, the agent compute itself
-                which action it would have taken from these observations.
-        Returns: the value of the given features.
+            observations (np.ndarray): The observation(s) from which we want to obtain a value. Could be a batch.
+            actions (np.ndarray, optional): The action that will be performed from the given observation(s). If none,
+                the agent compute itself which action it would have taken from these observations.
+        Returns:
+            np.ndarray: The value of the given features.
         """
         with torch.no_grad():
             values = self.model(observations)
@@ -109,14 +149,15 @@ class C51(ValueBasedAgent):
                 values = values.gather(1, actions.to(torch.long).unsqueeze(1))
         return values.cpu().detach().numpy()
 
-    def action(self, observation: np.ndarray, explore=True):
+    def action(self, observation: np.ndarray, explore=True) -> np.ndarray:
         """
         Args:
             observation: The observation from which we want the agent to take an action.
             explore: Boolean indicating whether the agent can explore with this action of only exploit.
             If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
             no matter the explore value here.
-        Returns: The action chosen by the agent.
+        Returns:
+            np.ndarray: The action chosen by the agent.
         """
         if explore and not self.under_test and self.train_interactions_done > self.steps_before_epsilon_decay:
             self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_step)

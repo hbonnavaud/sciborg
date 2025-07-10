@@ -1,8 +1,9 @@
 import copy
 import json
 import os.path
+import pathlib
 import pickle
-from typing import Union
+from typing import Union, Self
 import inspect
 import gymnasium as gym
 import numpy as np
@@ -24,14 +25,18 @@ class RLAgent(ABC):
                  action_space: Union[Box, Discrete],
                  **params):
         """
-        @param observation_space: Environment's observation space.
-        @param action_space: Environment's action_space.
-        @param device: agent's device.
+        Args:
+            observation_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's observation space.
+            action_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's action_space.
+            name (str, optional): The agent's name.
+            device (torch.device, optional): The device on which the agent operates.
         """
         assert isinstance(observation_space, (Box, Discrete)), \
             "The observation space should be an instance of gym.spaces.Space"
         assert isinstance(action_space, (Box, Discrete)), \
             "The action space should be an instance of gym.spaces.Space"
+
+        self.name = params.get("name", "C51")
         
         self.device = params.get("device", torch.device("cuda" if torch.cuda.is_available() else "cpu"))
         assert isinstance(self.device, torch.device)
@@ -75,8 +80,8 @@ class RLAgent(ABC):
     def start_episode(self, observation: np.ndarray, test_episode: bool = False):
         """
         Args:
-            observation: The first observation of the episode.
-            test_episode: Boolean indication whether the episode is a test episode or not.
+            observation (np.ndarray): The first observation of the episode.
+            test_episode (bool, optional): Boolean indication whether the episode is a test episode or not.
             If it is a test episode, the agent will not explore (fully deterministic actions) and not learn (no
             interaction data storage or learning process).
         """
@@ -88,14 +93,15 @@ class RLAgent(ABC):
         self.under_test = test_episode
 
     @abstractmethod
-    def action(self, observation: np.ndarray, explore=True):
+    def action(self, observation: np.ndarray, explore=True) -> np.ndarray:
         """
         Args:
-            observation: The observation from which we want the agent to take an action.
-            explore: Boolean indicating whether the agent can explore with this action of only exploit.
+            observation (np.ndarray): The observation from which we want the agent to take an action.
+            explore (bool, optional): Boolean indicating whether the agent can explore with this action of only exploit.
             If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
             no matter the explore value here.
-        Returns: The action chosen by the agent.
+        Returns:
+            np.ndarray: The action chosen by the agent.
         """
         pass
 
@@ -110,11 +116,11 @@ class RLAgent(ABC):
         The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
         Therefore, it does not appear in the function signature.
         Args:
-            action (np.ndarray): the action performed by the agent at this step.
-            reward (float): the reward returned by the environment following this action.
-            new_observation (np.ndarray): the new state reached by the agent with this action.
-            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
-            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
+            action (np.ndarray): The action performed by the agent at this step.
+            reward (float): The reward returned by the environment following this action.
+            new_observation (np.ndarray): The new state reached by the agent with this action.
+            done (bool): Whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool): Whether the agent cal learn from this step or not (will define if the agent can save this interaction
                 data, and start a learning step or not).
         """
         self.episode_time_step_id += 1
@@ -132,13 +138,31 @@ class RLAgent(ABC):
         pass
 
     def stop_episode(self):
+        """
+        Function that should be called everytime an episode is done.
+        For most agents, it simply updates some variables. But it can also be used as an event listener to process some
+            more things (see HER for an example).
+        """
         self.episode_id += 1
         self.episode_started = False
 
-    def set_device(self, device):
+        """
+        Change the device for every torch.nn.module and torch.tensor in this agent's attributes.
+        Args:
+            device (torch.device): The desired new device.
+        """
+
+    def set_device(self, device: torch.device):
+        """
+        Change the device for every torch.nn.module and torch.tensor in this agent's attributes.
+        This function automatically search for these attributes, and then does not have to be overridden in the child
+        classes.
+        Args:
+            device (torch.device): The desired new device.
+        """
         self.device = device
         for attr, value in vars(self).items():
-            if isinstance(value, torch.nn.Module):
+            if isinstance(value, (torch.nn.Module, torch.Tensor)):
                 getattr(self, attr).to(self.device)
 
     def __deepcopy__(self, memo):
@@ -157,10 +181,20 @@ class RLAgent(ABC):
                 setattr(result, k, copy.deepcopy(v, memo))
         return result
 
-    def copy(self):
+    def copy(self) -> Self:
+        """
+        Returns:
+            Self: A copy of this agent.
+        """
         return copy.deepcopy(self)
 
-    def save(self, directory: str):
+    def save(self, directory: Union[str, pathlib.Path]) -> None:
+        """
+        Save the agent's attributes to a directory.
+
+        Args:
+            directory (Union[str, pathlib.Path]): The directory where the agent should be saved.
+        """
         create_dir(directory)
         save_in_json = {}
         save_in_pickle = {"class": self.__class__}
@@ -186,7 +220,13 @@ class RLAgent(ABC):
         with open(os.path.join(directory, "objects_attributes.pk"), "wb") as f:
             pickle.dump(save_in_pickle, f)
 
-    def load(self, directory):
+    def load(self, directory: Union[str, pathlib.Path]) -> None:
+        """
+        Load the agent's saved attributes from a directory.
+
+        Args:
+            directory (Union[str, pathlib.Path]): The directory where the agent has been saved.
+        """
         if not os.path.isdir(directory):
             raise FileNotFoundError(f"Directory {directory} not found or is not a directory.")
 

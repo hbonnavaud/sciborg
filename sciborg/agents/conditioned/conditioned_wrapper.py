@@ -1,5 +1,6 @@
-from typing import Union
+from typing import Union, Optional
 import numpy as np
+import torch
 from gymnasium.spaces import Box, Discrete
 
 from ..conditioned.conditioned_agent import ConditionedAgent
@@ -23,16 +24,16 @@ class ConditioningWrapper(ConditionedAgent):
                  action_space: Union[Box, Discrete],
                  conditioning_space: Union[Box, Discrete],
                  **params):
-
         """
         Args:
+            observation_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's observation space.
+            action_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's action_space.
+            conditioning_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Conditioning space.
+            name (str, optional): The agent's name.
+            device (torch.device, optional): The device on which the agent operates.
             reinforcement_learning_agent_class: The class of the agent to be wrapped.
-            This class will be instantiated using the given parameters, and the computed information (such as the new
-            conditioned observation space).
-            observation_space: The wrapper observation space, WHICH IS NOT EQUAL TO THE WRAPPED AGENT OBSERVATION SPACE.
-            action_space: The agent's action space.
-            conditioning_space: The conditioning space.
-            **params:
+                This class will be instantiated using the given parameters, and the computed information (such as the
+                new conditioned observation space).
         """
 
         # Super class init + add to self.init_params, parameters that are not send to it.
@@ -65,13 +66,13 @@ class ConditioningWrapper(ConditionedAgent):
             raise AttributeError(f"accessing private attribute '{name}' is prohibited")
         return getattr(self.reinforcement_learning_agent, name)
 
-    def start_episode(self, *episode_information, test_episode=False):
+    def start_episode(self, *episode_information, test_episode: bool = False):
         """
         Args:
-            episode_information: a tuple containing two instances:
-             - information[0]: observation: The first observation of the episode.
-             - information[1]: conditioning: The conditioning of the episode.
-            test_episode: Boolean indication whether the episode is a test episode or not.
+            episode_information (Tuple[np.ndarray, np.ndarray]): A tuple that contains:
+                observation (np.ndarray): The first observation of the episode.
+                conditioning (np.ndarray): The data that will condition the episode.
+            test_episode (bool, optional): Boolean indication whether the episode is a test episode or not.
             If it is a test episode, the agent will not explore (fully deterministic actions) and not learn (no
             interaction data storage or learning process).
         """
@@ -81,12 +82,15 @@ class ConditioningWrapper(ConditionedAgent):
         self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_conditioning),
                                                         test_episode=test_episode)
 
-    def get_features(self, observations, conditioning=None) -> np.ndarray:
+    def get_features(self, observations: np.ndarray, conditioning: Optional[np.ndarray] = None) -> np.ndarray:
         """
         Args:
-            observations: The observations from which we want the feature (Could be a single one or a batch).
-            conditioning: The conditioning from which we want the feature (Could be a single one or a batch).
-        Returns: the features that will be used as an input for the agent's NNs.
+            observations (np.ndarray): The observations from which we want the feature (Could be a single one or a
+                batch).
+            conditioning (np.ndarray, optional): The conditioning from which we want the feature (Could be a single one
+                or a batch).
+        Returns:
+            np.ndarray: The features that will be used as an input for the agent's NNs.
         """
 
         # Both shapes should match exactly, but this function is supposed to work with a batch of observation and a
@@ -114,16 +118,20 @@ class ConditioningWrapper(ConditionedAgent):
         else:
             raise NotImplementedError("Observation space ang goal space with different types are not supported.")
 
-    def action(self, observation, conditioning=None, explore=True) -> np.ndarray:
+    def action(self,
+               observation: np.ndarray,
+               conditioning: Optional[np.ndarray] = None,
+               explore: bool = True) -> np.ndarray:
         """
         Args:
-            observation: the observation from which we want the agent to take an action.
-            conditioning: the data conditioning the agent for this action. If this data is None, then the conditioning
-            used is the one stored fo the episode, i.e. self.current_conditioning.
-            explore: boolean indicating whether the agent can explore with this action of only exploit.
-            If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
-            no matter the explore value here.
-        Returns: the action chosen by the agent.
+            observation (np.ndarray): The observation from which we want the agent to take an action.
+            conditioning (np.ndarray, optional): The data conditioning the agent for this action. If this data is None,
+                then the conditioning used is the one stored fo the episode, i.e. self.current_conditioning.
+            explore (bool, optional): Boolean indicating whether the agent can explore with this action of only exploit.
+                If test_episode was set to True in the last self.start_episode call, the agent will exploit
+                (explore=False) no matter the explore value here.
+        Returns:
+            np.ndarray: The action chosen by the agent.
         """
         return self.reinforcement_learning_agent.action(
             self.get_features(observation, self.current_conditioning),
@@ -136,24 +144,33 @@ class ConditioningWrapper(ConditionedAgent):
         """
         self.reinforcement_learning_agent.learn()
 
-    def process_interaction(self, action: np.ndarray, reward: float, new_observation: np.ndarray,
-                            done: bool, learn: bool = True):
+    def process_interaction(self,
+                            action: np.ndarray,
+                            reward: float,
+                            new_observation: np.ndarray,
+                            done: bool,
+                            learn: bool = True):
         """
         Processed the passed interaction using the given information.
-        The state from which the action has been performed is kept in the agent's attribute, and updated everytime this function is called.
-        Therefore, it does not appear in the function signature.
+        The state from which the action has been performed is kept in the agent's attribute, and updated everytime
+        this function is called. Therefore, it does not appear in the function signature.
         Args:
-            action (np.ndarray): the action performed by the agent at this step.
-            reward (float): the reward returned by the environment following this action.
-            new_observation (np.ndarray): the new state reached by the agent with this action.
-            done (bool): whether the episode is done (no action will be performed from the given new_state) or not.
-            learn (bool): whether the agent cal learn from this step or not (will define if the agent can save this interaction
-                data, and start a learning step or not).
+            action (np.ndarray): The action performed by the agent at this step.
+            reward (float): The reward returned by the environment following this action.
+            new_observation (np.ndarray): The new state reached by the agent with this action.
+            done (bool): Whether the episode is done (no action will be performed from the given new_state) or not.
+            learn (bool, optional): Whether the agent cal learn from this step or not (will define if the agent can
+                save this interaction data, and start a learning step or not).
         """
         super().process_interaction(action, reward, new_observation, done, learn=learn)
         new_observation = self.get_features(new_observation, self.current_contitioning)
         self.reinforcement_learning_agent.process_interaction(action, reward, new_observation, done, learn)
 
-    def set_device(self, device):
+    def set_device(self, device: torch.device):
+        """
+        Change the device for every torch.nn.module and torch.tensor in this agent's attributes.
+        Args:
+            device (torch.device): The desired new device.
+        """
         super().set_device(device)
         self.reinforcement_learning_agent.set_device(device)

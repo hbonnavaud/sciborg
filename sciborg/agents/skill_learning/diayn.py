@@ -221,7 +221,11 @@ class DIAYN(RLAgent):
         super().stop_episode()
     
     def set_device(self, device):
-        """Set device for both wrapper and wrapped agent"""
+        """
+        Change the device for every torch.nn.module and torch.tensor in this agent's attributes.
+        Args:
+            device: the desired new device.
+        """
         super().set_device(device)
         self.wrapped_agent.set_device(device)
         self.discriminator.to(device)

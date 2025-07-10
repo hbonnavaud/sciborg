@@ -99,14 +99,15 @@ class Model(torch.nn.Module):
         observation = observation.to(self.device, dtype=torch.float32)
         return self.model(observation)
 
-    def get_value(self, observations: np.ndarray, actions: np.ndarray = None):
+    def get_value(self, observations: np.ndarray, actions: np.ndarray = None) -> np.ndarray:
         """
         Args:
             observations: the observation(s) from which we want to obtain a value. Could be a batch.
             observations: the observation(s) from which we want to obtain a value. Could be a batch.
             actions: the action that will be performed from the given observation(s). If none, the agent compute itself
                 which action it would have taken from these observations.
-        Returns: the value of the given features.
+        Returns:
+            np.ndarray: the value of the given features.
         """
         return self.critic(self.features(observations)).squeeze()
 
@@ -179,14 +180,15 @@ class PpoDiscreteAgent(Agent):
     def set_device(self, device):
         self.model.to(device=device)
 
-    def action(self, observation: np.ndarray, explore=True):
+    def action(self, observation: np.ndarray, explore=True) -> np.ndarray:
         """
         Args:
             observation: The observation from which we want the agent to take an action.
             explore: Boolean indicating whether the agent can explore with this action of only exploit.
             If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
             no matter the explore value here.
-        Returns: The action chosen by the agent.
+        Returns:
+            np.ndarray: The action chosen by the agent.
         """
         with torch.no_grad():
             return self.model.get_action(observation, explore=explore).detach().cpu().item()
@@ -213,10 +215,6 @@ class PpoDiscreteAgent(Agent):
             self.replay_buffer.append((self.last_observation, action, reward, new_observation, done))
             self.learn()
         super().process_interaction(action, reward, new_observation, done, learn=learn)
-
-    # def stop_episode(self):
-    #     self.learn()
-    #     super().stop_episode()
 
     def store_transition(self, observation, action, reward, next_observation, done):
         if self.nb_learning_data_available >= self.buffer_size:

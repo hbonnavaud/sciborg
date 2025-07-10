@@ -1,5 +1,6 @@
  - Terminer refactor conditioned agent
  - Refactor le système save/load des agents
+ - Tester les fonctions copy/save/load
  - Refactor DIAYN
  - Intégrer DIAYN V2
  - Intégrer https://github.com/Paul-antoineLeTolguenec/RunAwayFromYourPast/tree/clean/src/baselines
@@ -7,3 +8,5 @@
     - LSD
     - METRA
     - CSD
+
+ - Pourquoi DQN set epsilon mais pas c51 dans start_episode() ?

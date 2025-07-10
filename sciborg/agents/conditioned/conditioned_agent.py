@@ -24,6 +24,14 @@ class ConditionedAgent(RLAgent, ABC):
                  action_space: Union[Box, Discrete],
                  conditioning_space: Union[Box, Discrete],
                  **params):
+        """
+        Args:
+            observation_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's observation space.
+            action_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Environment's action_space.
+            conditioning_space (Union[gym.spaces.Box, gym.spaces.Discrete]): Conditioning space.
+            name (str, optional): The agent's name.
+            device (torch.device, optional): The device on which the agent operates.
+        """
 
         super().__init__(observation_space=observation_space, action_space=action_space, **params)
 

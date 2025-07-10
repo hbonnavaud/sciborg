@@ -13,26 +13,42 @@ class TD3(ValueBasedAgent):
     def __init__(self, *args, **params):
         """
         Args:
-            observation_space: Agent's observations space.
-            action_space: Agent's actions space.
-            gamma: Value of gamma in the critic's target computation formulae.
-            policy_update_frequency: how many critic update between policy updates.
-            layer1_size: Size of actor and critic first hidden layer.
-            layer2_size: Size of actor and critic second hidden layer.
-            tau: Tau for target critic and actor convergence to their non-target equivalent. If set, this value
-                overwrite both 'actor_tau' and 'critic_tau' hyperparameters.
-            actor_tau:
-            critic_tau:
-            learning_rate: Learning rate of actor and critic modules. If set, this value overwrite both
-                'actor_lr' and 'critic_lr' hyperparameters.
-            actor_lr: Actor learning rate. Overwritten by 'learning_rate' if it is set.
-            critic_lr: Critic learning rate. Overwritten by 'learning_rate' if it is set.
-            optimizer: Actor and Critic optimizer. Must be an instance of torch.optim.Optimizer. If set, this value
-                overwrite both 'actor_optimizer' and 'critic_optimizer' hyperparameters.
-            actor_optimizer: Actor optimizer. Must be an instance of torch.optim.Optimizer. Overwritten by optimizer
-                if set.
-            critic_optimizer: Critic optimizer. Must be an instance of torch.optim.Optimizer. Overwritten by optimizer
-                if set.
+            observation_space (Union[gym.spaces.Box, gym.spaces.Discrete]): The environment's observation space.
+            action_space (Union[gym.spaces.Box, gym.spaces.Discrete]): The environment's action space.
+            name (str, optional): The agent's name.
+            device (torch.device, optional): The device on which the agent operates.
+            gamma (float, optional): Discount factor used in the critic's target computation formula.
+            exploration_noise_std (float, optional): Standard deviation of the Gaussian noise added to the actor's
+                output for exploration.
+            policy_update_frequency (int, optional): Number of critic updates between each policy (actor) update.
+            target_policy_noise_scale (float, optional): Scale for the noise added to the target actor's output for
+                q-target computation.
+            target_policy_max_noise (float, optional):Maximal value for the target action. The minimal value is
+                -target_action_max_noise.
+            batch_size (int, optional): Number of samples in each training batch.
+            replay_buffer_size (int, optional): Maximum number of interaction records the replay buffer can store
+                before it is full.
+            steps_before_learning (int, optional): Number of steps to take before learning begins, allowing the replay
+                buffer to fill.
+            layer_1_size (int, optional): Size of the first layer in the actor, critic, and target networks.
+            layer_2_size (int, optional): Size of the second layer in the actor, critic, and target networks.
+            tau (float, optional): Soft update coefficient for the target actor and critic networks. If set, overrides
+                both 'actor_tau' and 'critic_tau'.
+            actor_tau (float, optional): Soft update coefficient for the target actor network. Overridden by 'tau' if
+                it is set.
+            critic_tau (float, optional): Soft update coefficient for the target critic network. Overridden by 'tau' if
+                it is set.
+            learning_rate (float, optional): Learning rate for both actor and critic networks. If set, overrides both
+                'actor_lr' and 'critic_lr'.
+            actor_lr (float, optional): Learning rate for the actor network. Overridden by 'learning_rate' if it is set.
+            critic_lr (float, optional): Learning rate for the critic network. Overridden by 'learning_rate' if it is
+                set.
+            optimizer_class (Type[torch.optim.Optimizer], optional): Optimizer class for both actor and critic. If set,
+                overrides both 'actor_optimizer_class' and 'critic_optimizer_class'.
+            actor_optimizer_class (Type[torch.optim.Optimizer], optional): Optimizer class for the actor network.
+                Overridden by 'optimizer_class' if it is set.
+            critic_optimizer_class (Type[torch.optim.Optimizer], optional): Optimizer class for the critic network.
+                Overridden by 'optimizer_class' if it is set.
         """
         super().__init__(*args, **params)
         self.name = params.get("name", "TD3")
@@ -41,7 +57,7 @@ class TD3(ValueBasedAgent):
         self.gamma = params.get("gamma", 0.99)
         self.exploration_noise_std = params.get("exploration_noise_std", 0.2)
         self.policy_update_frequency = params.get("policy_update_frequency", 2)
-        self.target_policy_noise = params.get("target_policy_noise", 0.2)
+        self.target_policy_noise_scale = params.get("target_policy_noise_scale", 0.2)
         self.target_policy_max_noise = params.get("target_policy_max_noise", 0.5)
         self.batch_size = params.get("batch_size", 256)
         self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
@@ -111,14 +127,15 @@ class TD3(ValueBasedAgent):
         self.action_offset = (torch.from_numpy((self.action_space.high + self.action_space.low) / 2.)
                               .to(device=self.device, dtype=torch.float32))
 
-    def action(self, observation: np.ndarray, explore=True):
+    def action(self, observation: np.ndarray, explore=True) -> np.ndarray:
         """
         Args:
             observation: The observation from which we want the agent to take an action.
             explore: Boolean indicating whether the agent can explore with this action of only exploit.
             If test_episode was set to True in the last self.start_episode call, the agent will exploit (explore=False)
             no matter the explore value here.
-        Returns: The action chosen by the agent.
+        Returns:
+            np.ndarray: The action chosen by the agent.
         """
         if self.train_interactions_done <= self.steps_before_learning:
             return self.action_space.sample()
@@ -167,7 +184,7 @@ class TD3(ValueBasedAgent):
             states, actions, rewards, new_states, dones = self.replay_buffer.sample(self.batch_size)
 
             with torch.no_grad():
-                clipped_noise = (torch.randn_like(actions, device=self.device) * self.target_policy_noise).clamp(
+                clipped_noise = (torch.randn_like(actions, device=self.device) * self.target_policy_noise_scale).clamp(
                     -self.target_policy_max_noise, self.target_policy_max_noise
                 ) * self.action_scale + self.action_offset
                 target_actions = self.target_actor(new_states) * self.action_scale + self.action_offset
@@ -210,7 +227,15 @@ class TD3(ValueBasedAgent):
                     target_param.data.copy_(self.actor_tau * param.data + (1 - self.actor_tau) * target_param.data)
             self.learning_steps_done += 1
 
-    def get_value(self, observations, actions=None):
+    def get_value(self, observations, actions=None) -> np.ndarray:
+        """
+        Args:
+            observations (np.ndarray): The observation(s) from which we want to obtain a value. Could be a batch.
+            actions (np.ndarray, optional): The action that will be performed from the given observation(s). If none,
+                the agent compute itself which action it would have taken from these observations.
+        Returns:
+            np.ndarray: The value of the given features.
+        """
         with torch.no_grad():
             if actions is None:
                 actions = self.actor(observations) * self.action_scale + self.action_offset
