@@ -1,7 +1,6 @@
-from .conditioned_agent import GoalConditionedAgent
-from .conditioned_wrapper import GoalConditionedWrapper
+from .conditioned_agent import ConditionedAgent
+from .conditioning_wrapper import ConditioningWrapper
 from .her import HER
-from .tilo import TILO
 
 
-__all__ = ["GoalConditionedAgent", "GoalConditionedWrapper", "HER", "TILO"]
+__all__ = ["ConditionedAgent", "ConditioningWrapper", "HER"]

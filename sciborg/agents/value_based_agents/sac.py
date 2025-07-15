@@ -169,7 +169,6 @@ class SAC(ValueBasedAgent):
             lr=self.critic_lr, eps=1e-4)
         self.target_critic_2 = deepcopy(self.critic_2)
 
-
         # Setup actor and its target
         self.actor = Actor(
             device=self.device,
@@ -179,6 +178,12 @@ class SAC(ValueBasedAgent):
             layer_2_size=self.layer_2_size,
         ).to(self.device)
         self.actor_optimizer = self.actor_optimizer_class(self.actor.parameters(), lr=self.actor_lr, eps=1e-4)
+
+        # Information to scale the action to the action space
+        self.action_scale = (torch.from_numpy((self.action_space.high - self.action_space.low) / 2.)
+                             .to(device=self.device, dtype=torch.float32))
+        self.action_offset = (torch.from_numpy((self.action_space.high + self.action_space.low) / 2.)
+                              .to(device=self.device, dtype=torch.float32))
 
         # self.action_noise = torch.distributions.normal.Normal(
         #     torch.zeros(self.action_size).to(self.device),
@@ -206,10 +211,9 @@ class SAC(ValueBasedAgent):
             action = self.actor.get_action(observation)[0].to(self.device)
             # if not self.under_test and explore:  TODO: TEST without this shit Update the __init__ docstring for action_noise
             #     action += self.action_noise.sample()
-            action = action.cpu().detach().numpy()
 
             # Fit action to our action_space
-            action = self.scale_action(action, Box(-1, 1, (self.action_size,)))
+            action = (action * self.action_scale + self.action_offset).cpu().detach().numpy()
         return action
 
     def process_interaction(self,

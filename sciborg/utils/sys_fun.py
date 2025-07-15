@@ -1,5 +1,8 @@
 import os
+import pathlib
 import shutil
+from typing import Union
+
 import cv2
 import numpy as np
 from PIL import Image
@@ -35,7 +38,7 @@ def empty_dir(directory_path: str, send_to_trash=True):
                 print('Failed to delete %s. Reason: %s' % (file_path, e))
 
 
-def create_dir(directory_name: str, replace=False):
+def create_dir(directory_name: Union[str, pathlib.Path], replace=False):
 
     directory_path = os.path.abspath(directory_name)
     directory_path += os.path.sep
@@ -59,7 +62,7 @@ def create_dir(directory_name: str, replace=False):
                 raise Exception
 
 
-def generate_video(images, output_directory: str, filename, convert_to_bgr=True):
+def generate_video(images, output_directory: Union[str, pathlib.Path], filename, convert_to_bgr=True):
     """
     generate a video from the given list of images, and save them at location output_directory/filename.mp4.
     @param images: List of images as numpy array of pixels. For each image, the expected shape is width * height * 3.
@@ -98,7 +101,7 @@ def generate_video(images, output_directory: str, filename, convert_to_bgr=True)
     out.release()
 
 
-def save_image(image: np.ndarray, output_directory: str, file_name: str, extension: str = "png"):
+def save_image(image: np.ndarray, output_directory: Union[str, pathlib.Path], file_name: str, extension: str = "png"):
     if output_directory[0] != "/":
         # Get the frame of the caller to compute the absolute path from a relative one.
         caller_frame = inspect.currentframe()

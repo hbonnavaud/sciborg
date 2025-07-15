@@ -1,7 +1,7 @@
 from random import randrange
 from typing import Union
 from gymnasium.spaces import Box, Discrete
-from conditioned_wrapper import ConditioningWrapper
+from .conditioning_wrapper import ConditioningWrapper
 import numpy as np
 
 

@@ -52,7 +52,6 @@ class RLAgent(ABC):
         for ignored in ["self", "frame", "__class__"]:
             self.init_params.pop(ignored, None)  # Fixed: use pop with default
             # OLD: self.init_params.pop(ignored)
-        print("computed init params: ", self.init_params)
 
         # Observation info
         self.observation_space = observation_space
@@ -85,6 +84,9 @@ class RLAgent(ABC):
             If it is a test episode, the agent will not explore (fully deterministic actions) and not learn (no
             interaction data storage or learning process).
         """
+
+        assert self.observation_space.contains(observation.astype(self.observation_space.dtype))
+
         if self.episode_started:
             self.stop_episode()
         self.episode_started = True
@@ -187,6 +189,9 @@ class RLAgent(ABC):
             Self: A copy of this agent.
         """
         return copy.deepcopy(self)
+
+    def reset(self):
+        return self.__init__(self.init_params)
 
     def save(self, directory: Union[str, pathlib.Path]) -> None:
         """

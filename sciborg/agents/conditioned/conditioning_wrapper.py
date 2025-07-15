@@ -4,7 +4,7 @@ import torch
 from gymnasium.spaces import Box, Discrete
 
 from ..conditioned.conditioned_agent import ConditionedAgent
-from ... import RLAgent
+from ..rl_agent import RLAgent
 
 
 class ConditioningWrapper(ConditionedAgent):
@@ -38,7 +38,6 @@ class ConditioningWrapper(ConditionedAgent):
 
         # Super class init + add to self.init_params, parameters that are not send to it.
         super().__init__(observation_space, action_space, conditioning_space, **params)
-        self.name = params.get("name", "Conditioned " + self.reinforcement_learning_agent.name)
 
         # # Verify and store the wrapped agent class
         assert issubclass(reinforcement_learning_agent_class, RLAgent)
@@ -59,6 +58,15 @@ class ConditioningWrapper(ConditionedAgent):
         self.reinforcement_learning_agent: RLAgent = (
             reinforcement_learning_agent_class(self.feature_space, action_space, **params))
 
+        self.name = params.get("name", "Conditioned " + self.reinforcement_learning_agent.name)
+
+    @property
+    def goal_space(self):
+        return self.conditioning_space
+
+    @goal_space.setter
+    def goal_space(self, value):
+        raise NotImplementedError("This behaviour has not be planned and is probably a bad practice.")
 
     def __getattr__(self, name):
         """Returns an attribute with ``name``, unless ``name`` starts with an underscore."""
@@ -77,7 +85,7 @@ class ConditioningWrapper(ConditionedAgent):
             interaction data storage or learning process).
         """
         observation, conditioning = episode_information
-        super().start_episode(observation, test_episode)
+        super().start_episode(observation, conditioning, test_episode=test_episode)
         self.current_conditioning = conditioning
         self.reinforcement_learning_agent.start_episode(self.get_features(observation, self.current_conditioning),
                                                         test_episode=test_episode)
@@ -163,7 +171,7 @@ class ConditioningWrapper(ConditionedAgent):
                 save this interaction data, and start a learning step or not).
         """
         super().process_interaction(action, reward, new_observation, done, learn=learn)
-        new_observation = self.get_features(new_observation, self.current_contitioning)
+        new_observation = self.get_features(new_observation, self.current_conditioning)
         self.reinforcement_learning_agent.process_interaction(action, reward, new_observation, done, learn)
 
     def set_device(self, device: torch.device):

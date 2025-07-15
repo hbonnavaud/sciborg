@@ -63,8 +63,7 @@ class ConditionedAgent(RLAgent, ABC):
             interaction data storage or learning process).
         """
         observation, conditioning = episode_information
-        assert self.observation_space.contains(observation)
-        assert self.conditioning_space.contains(conditioning)
+        assert self.conditioning_space.contains(conditioning.astype(self.conditioning_space.dtype))
         super().start_episode(observation, test_episode=test_episode)
 
     @abstractmethod
