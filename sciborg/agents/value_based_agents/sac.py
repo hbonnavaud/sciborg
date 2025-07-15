@@ -1,14 +1,11 @@
 from copy import deepcopy
-from typing import Union, Type
-
+from typing import Union
 import numpy as np
 import torch
 from torch import optim, nn
 from gymnasium.spaces import Box, Discrete
-
 from ..utils import ReplayBuffer
 from .value_based_agent import ValueBasedAgent
-from ..utils.copy_weights import copy_weights
 
 
 class Actor(torch.nn.Module):
@@ -112,11 +109,10 @@ class SAC(ValueBasedAgent):
         assert self.device is not None
         # Gather parameters
         self.gamma = params.get("gamma", 0.99)
-        # self.exploration_noise_std = params.get("exploration_noise_std", 0.1)
         self.policy_update_frequency = params.get("policy_update_frequency", 2)
         self.batch_size = params.get("batch_size", 256)
         self.replay_buffer_size = params.get("replay_buffer_size", int(1e6))
-        self.steps_before_learning = params.get("steps_before_learning", 0)
+        self.steps_before_learning = params.get("steps_before_learning", 100)
         self.target_network_update_frequency = params.get("target_network_update_frequency", 1)
         self.layer_1_size = params.get("layer_1_size", 256)
         self.layer_2_size = params.get("layer_2_size", 256)
@@ -125,7 +121,7 @@ class SAC(ValueBasedAgent):
         self.critic_tau = params.get("critic_tau", 0.001)
         self.learning_rate = params.get("learning_rate", None)
         self.actor_lr = params.get("actor_lr", 3e-4)
-        self.critic_lr = params.get("critic_lr", 1e-3)
+        self.critic_lr = params.get("critic_lr", 3e-4)
         self.alpha_lr = params.get("alpha_lr", 0.00025)
         self.alpha = params.get("alpha", 0.2)
         self.optimizer_class = params.get("optimizer_class", None)
@@ -185,11 +181,6 @@ class SAC(ValueBasedAgent):
         self.action_offset = (torch.from_numpy((self.action_space.high + self.action_space.low) / 2.)
                               .to(device=self.device, dtype=torch.float32))
 
-        # self.action_noise = torch.distributions.normal.Normal(
-        #     torch.zeros(self.action_size).to(self.device),
-        #     torch.full((self.action_size,), self.exploration_noise_std).to(self.device)
-        # )
-
         if self.autotune_alpha:
             self.target_entropy = - self.target_entropy_scale * torch.log(1 / torch.tensor(self.action_size))
             self.log_alpha = torch.zeros(1, requires_grad=True, device=self.device)
@@ -209,8 +200,6 @@ class SAC(ValueBasedAgent):
         with torch.no_grad():
             observation = torch.tensor(observation, dtype=torch.float).to(self.device)
             action = self.actor.get_action(observation)[0].to(self.device)
-            # if not self.under_test and explore:  TODO: TEST without this shit Update the __init__ docstring for action_noise
-            #     action += self.action_noise.sample()
 
             # Fit action to our action_space
             action = (action * self.action_scale + self.action_offset).cpu().detach().numpy()
@@ -293,8 +282,10 @@ class SAC(ValueBasedAgent):
                         self.alpha = self.log_alpha.exp().item()
 
             if self.learning_steps_done % self.target_network_update_frequency == 0:
-                self.target_critic_1 = copy_weights(self.target_critic_1, self.critic_1, self.critic_tau)
-                self.target_critic_2 = copy_weights(self.target_critic_2, self.critic_2, self.critic_tau)
+                for param, target_param in zip(self.critic_1.parameters(), self.target_critic_1.parameters()):
+                    target_param.data.copy_(self.critic_tau * param.data + (1 - self.critic_tau) * target_param.data)
+                for param, target_param in zip(self.critic_2.parameters(), self.target_critic_2.parameters()):
+                    target_param.data.copy_(self.critic_tau * param.data + (1 - self.critic_tau) * target_param.data)
             self.learning_steps_done += 1
 
     def get_value(self, observations: np.ndarray, actions: np.ndarray = None) -> np.ndarray:
